@@ -59,6 +59,17 @@ def financials(ticker: str, years: str):
     except Exception:
         console.print("[dim]详细三张表暂不可用 (东方财富接口维护中)[/dim]")
 
+    # 3. 历史分红
+    try:
+        dividends = p.get_dividends(symbol, dir_name=dir_name)
+        if not dividends.empty:
+            latest = dividends.iloc[-1]
+            recent_5 = dividends.tail(5)
+            total_dps = recent_5["派息"].sum()
+            console.print(f"[green]历史分红: {len(dividends)} 次, 最近5次累计派息 {total_dps:.2f} 元/股[/green]")
+    except Exception:
+        console.print("[dim]分红数据不可用[/dim]")
+
 
 def _display_financials(df, symbol: str):
     """Display key annual financial metrics."""

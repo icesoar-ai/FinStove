@@ -10,12 +10,13 @@ class DDMValuation(ValuationMethod):
         inc = financials.get("income", None)
         bs = financials.get("balance_sheet", None)
         cf = financials.get("cashflow", None)
+        dividends = financials.get("dividends", None)
 
         if inc is None or inc.empty:
-            return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, warnings=["无利润表数据"])
+            return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, reason="数据缺失", warnings=["无利润表数据"])
 
         try:
-            dps = self._extract_dps(inc, cf)
+            dps = self._extract_dps(inc, cf, dividends)
             if dps is None:
                 return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0.1, reason="数据缺失", warnings=["缺少股利数据，无法使用 DDM"])
             if dps <= 0:
@@ -42,8 +43,14 @@ class DDMValuation(ValuationMethod):
         except Exception as e:
             return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, warnings=[f"DDM计算异常: {e}"])
 
-    def _extract_dps(self, inc, cf) -> float | None:
-        # Try DPS from income statement or cash flow
+    def _extract_dps(self, inc, cf, dividends=None) -> float | None:
+        # 1. Use dedicated dividend history if available
+        if dividends is not None and not dividends.empty and "派息" in dividends.columns:
+            recent = dividends.tail(3)["派息"]  # average of last 3 dividends
+            if len(recent) > 0:
+                return float(recent.mean())
+
+        # 2. Try DPS column from income or cash flow statement
         for df_source in [inc, cf]:
             if df_source is None or df_source.empty:
                 continue
@@ -53,10 +60,11 @@ class DDMValuation(ValuationMethod):
                     vals = df_source[col].dropna()
                     if len(vals) > 0:
                         return float(vals.iloc[-1])
-        # Estimate from payout ratio
+
+        # 3. Estimate from payout ratio
         payout = self._extract_payout(inc, cf)
         if payout is None:
-            return None  # Data missing, not zero dividend
+            return None
         eps = self._extract_eps(inc)
         if eps and payout:
             return eps * payout

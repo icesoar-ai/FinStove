@@ -157,10 +157,16 @@ def valuation(ticker: str, format: str):
         summary = _augment_summary(summary)
         financials["summary"] = summary
 
+    # Load dividend history
+    dividends = storage.load("stock", "cn", dir_name, "dividends")
+    if not dividends.empty:
+        financials["dividends"] = dividends
+
     # Use summary as income / balance_sheet fallback if detailed statements absent
     has_income = "income" in financials
     has_bs = "balance_sheet" in financials
     has_cf = "cashflow" in financials
+    has_dividends = "dividends" in financials
 
     if "summary" in financials:
         if not has_income:
@@ -179,6 +185,9 @@ def valuation(ticker: str, format: str):
             available.append(label)
     if "summary" in financials:
         available[-1] += f" ({len(financials['summary'])}期摘要)"
+    if has_dividends:
+        latest_div = dividends.iloc[-1]
+        available.append(f"分红({len(dividends)}次, 最新{latest_div['派息']}元/股)")
     console.print(f"[dim]可用数据: {', '.join(available)}[/dim]")
 
     if not has_cf:

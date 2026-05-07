@@ -62,6 +62,27 @@ class AKShareProvider:
         except Exception:
             return {}
 
+    # ---- Dividends ----
+    def get_dividends(self, symbol: str, dir_name: Optional[str] = None) -> pd.DataFrame:
+        """Fetch historical dividend records via AKShare.
+
+        Returns DataFrame with columns: 公告日期, 派息, 送股, 转增, 进度,
+        除权除息日, 股权登记日, 红股上市日.
+        Only includes "实施" (executed) records.
+        """
+        store_symbol = dir_name or symbol
+        try:
+            df = self._ak.stock_history_dividend_detail(symbol=symbol, indicator="分红")
+            if df is not None and not df.empty:
+                df = df[df["进度"] == "实施"].copy()
+                df["公告日期"] = pd.to_datetime(df["公告日期"])
+                df = df.sort_values("公告日期").reset_index(drop=True)
+                self._storage.save(df, "stock", "cn", store_symbol, "dividends")
+                return df
+        except Exception:
+            pass
+        return pd.DataFrame()
+
     # ---- Financial Statements ----
     def get_financials(self, symbol: str, dir_name: Optional[str] = None) -> dict[str, pd.DataFrame]:
         """Fetch detailed financial statements via AKShare.
