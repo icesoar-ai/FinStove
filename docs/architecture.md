@@ -314,3 +314,52 @@ diskcache (SQLite缓存)
 - **Phase 3**: 每个 `/xxx-check` skill 可独立运行，返回有意义的分析
 - **Phase 4**: `/full-report 600519.SH` 输出 7 维度加权综合评分 + 判断 + 风险
 - **Phase 5**: 多股票批量分析不超时，降级可用
+
+---
+
+## 开发进度 (2026-05-07)
+
+### 已完成
+
+| Phase | 内容 | 状态 |
+|-------|------|------|
+| 1 | 项目骨架 + 数据层 (AKShare/yfinance/CNINFO providers, Parquet 存储, 增量获取) | ✓ |
+| 2 | 分析基类 + 技术分析 + 宏观分析 | ✓ |
+| 3 | 基本面估值子模块 (10个方法) | ✓ 代码完成 |
+| 3 | 其余分析模块 (7个, 代码完成) | ✓ 代码完成 |
+| 3 | CNINFO 年报下载 + MarkItDown | ✓ 超出计划 |
+| 4 | 集成层 (scorer/aggregator/report) + 跟踪 | ✓ |
+| — | CLI 命令: fetch, analyze-stock, financials, reports, macro-check, full-report, review | ✓ |
+| — | Skills: /analyze-stock, /financials, /reports, /macro-check, /full-report, /review | ✓ |
+
+### 待完成
+
+**数据源 (Phase 3 遗留):**
+- [ ] `providers/fred.py` — 美国宏观数据 (FRED)
+- [ ] `providers/coingecko.py` — 加密货币数据
+- [ ] `providers/news.py` — RSS 新闻抓取 + NLP 情绪
+
+**CLI + Skills (Phase 3 遗留):**
+- [ ] `market-scan` — 多市场概览 `/market-scan`
+- [ ] `capital-flow` — 资金流向 `/capital-flow`
+- [ ] `sentiment-check` — 情绪检测 `/sentiment-check`
+- [ ] `correlation-check` — 跨市场联动 `/correlation-check`
+- [ ] `risk-check` — 风险评估 `/risk-check`
+- [ ] `benchmark` — 基准对比 `/benchmark`
+- [ ] `scenario` — 情景分析 `/scenario`
+
+**基本面 (Phase 3 遗留):**
+- [ ] 财报文本分析 (MarkItDown 已集成, 提取会计政策/关联交易/风险因素/管理层展望)
+- [ ] AKShare 三张表接口不稳定 → 需要替代数据源或等待上游修复
+
+**Phase 5 打磨:**
+- [ ] JSON 输出 + 配置管理命令
+- [ ] 并行化分析模块 (ThreadPoolExecutor)
+- [ ] 数据源健康检查 + 降级
+- [ ] `--watchlist` 批量分析
+- [ ] 可选 Streamlit dashboard
+
+**数据质量:**
+- [ ] A股幸存者偏差处理 (退市公司历史)
+- [ ] 前视偏差检测 (财报发布日期 vs 截止日)
+- [ ] 复权数据校验
