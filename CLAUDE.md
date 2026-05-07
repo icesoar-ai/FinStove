@@ -32,21 +32,22 @@ docs/               # 文档
 ## CLI 命令
 
 ```bash
-python -m src.cli.main fetch <TICKER>              # 拉取 OHLCV
-python -m src.cli.main analyze-stock <TICKER>      # 技术分析
+python -m src.cli.main ohlcv <TICKER>              # 拉取日线 OHLCV
 python -m src.cli.main financials <TICKER>         # 财务数据
 python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
+python -m src.cli.main analyze-stock <TICKER>      # 技术分析
 python -m src.cli.main macro-check                 # 宏观评估
+python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
 python -m src.cli.main full-report <TICKER>        # 综合多维分析
 python -m src.cli.main review <TICKER>             # 回顾历史判断
 ```
 
 ## Skills
 
+- `/fetch-stock <TICKER>` — 数据抓取 (日线/财报/年报，可组合)
 - `/analyze-stock <TICKER>` — 个股技术分析
-- `/financials <TICKER>` — 财务数据拉取
-- `/reports <TICKER>` — 年报下载 (PDF + Markdown)
 - `/macro-check` — 宏观环境评估
+- `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
 - `/review <TICKER>` — 回顾历史判断
 

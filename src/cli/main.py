@@ -11,6 +11,7 @@ from src.utils.ticker import parse_ticker
 from src.cli.commands.stock import analyze_stock
 from src.cli.commands.macro import macro_check
 from src.cli.commands.financials import financials
+from src.cli.commands.valuation import valuation
 
 console = Console()
 
@@ -21,12 +22,12 @@ def cli():
     """金融分析助手 CLI."""
 
 
-@cli.command()
+@cli.command("ohlcv")
 @click.argument("ticker")
 @click.option("--start", default="2010-01-01", help="Start date")
 @click.option("--end", default="", help="End date (default: today)")
-def fetch(ticker: str, start: str, end: str):
-    """Fetch OHLCV data for a ticker."""
+def ohlcv(ticker: str, start: str, end: str):
+    """Fetch daily OHLCV bars for a ticker."""
     end = end or date.today().strftime("%Y-%m-%d")
     symbol, market = parse_ticker(ticker)
     cache = DataCache()
@@ -102,6 +103,8 @@ def full_report(ticker: str, context: str, format: str):
     symbol, market = parse_ticker(ticker)
     cache = DataCache()
     registry = ProviderRegistry(cache)
+    from src.utils.ticker import stock_dir
+    dir_name = stock_dir(symbol) if market == Market.CN else symbol
 
     console.print(f"[bold blue]Full Report: {symbol} (market={market.value}, context={context})[/bold blue]")
 
@@ -109,7 +112,7 @@ def full_report(ticker: str, context: str, format: str):
     end = date.today().strftime("%Y-%m-%d")
     try:
         if market == Market.CN:
-            df = registry.akshare.get_daily(symbol, "20200101", end.replace("-", ""))
+            df = registry.akshare.get_daily(symbol, "20200101", end.replace("-", ""), dir_name=dir_name)
         else:
             df = registry.yfinance.get_daily(symbol, market.value, "2020-01-01", end)
         if df is None or df.empty:
@@ -135,7 +138,7 @@ def full_report(ticker: str, context: str, format: str):
     # Fetch financial data
     financials = {}
     try:
-        financials = registry.akshare.get_financials(symbol)
+        financials = registry.akshare.get_financials(symbol, dir_name=dir_name)
     except Exception:
         pass
 
@@ -302,6 +305,7 @@ def reports(ticker: str, years: str):
 cli.add_command(analyze_stock)
 cli.add_command(macro_check)
 cli.add_command(financials)
+cli.add_command(valuation)
 
 
 if __name__ == "__main__":

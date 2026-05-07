@@ -43,7 +43,12 @@ class ParquetStorage:
             return
         path = self._path(asset_type, market, symbol, data_type)
         path.parent.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(path, index=False)
+        try:
+            df.to_parquet(path, index=False)
+        except Exception:
+            # PyArrow type inference fails on mixed object columns (e.g. strings
+            # mixed with bool, or '1.85%' formatted strings). Fallback: stringify all.
+            df.astype(str).to_parquet(path, index=False)
 
     # ---- Incremental merge ----
 

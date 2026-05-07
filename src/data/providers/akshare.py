@@ -33,15 +33,15 @@ class AKShareProvider:
 
     def get_daily(self, symbol: str, start: str = "20100101", end: Optional[str] = None,
                   market: str = "cn", dir_name: Optional[str] = None) -> pd.DataFrame:
-        """Fetch daily OHLCV. dir_name overrides the storage directory (e.g. '600388_龙净环保')."""
+        """Fetch daily OHLCV. dir_name overrides the storage symbol (e.g. '600388_龙净环保')."""
         if end is None:
             end = date.today().strftime("%Y%m%d")
 
-        store_dir = dir_name or market
+        store_symbol = dir_name or symbol
 
-        existing = self._storage.load("stock", store_dir, symbol, "daily")
+        existing = self._storage.load("stock", market, store_symbol, "daily")
         if not existing.empty:
-            _, last_date = self._storage.get_date_range("stock", store_dir, symbol, "daily")
+            _, last_date = self._storage.get_date_range("stock", market, store_symbol, "daily")
             if last_date:
                 start = (last_date + timedelta(days=1)).strftime("%Y%m%d")
                 if start >= end:
@@ -52,7 +52,7 @@ class AKShareProvider:
         if new_df is None or new_df.empty:
             return existing if not existing.empty else pd.DataFrame()
 
-        return self._storage.merge_and_save(new_df, "stock", store_dir, symbol, "daily")
+        return self._storage.merge_and_save(new_df, "stock", market, store_symbol, "daily")
 
     # ---- Stock Info ----
     def get_info(self, symbol: str) -> dict:
@@ -64,7 +64,8 @@ class AKShareProvider:
 
     # ---- Financial Statements ----
     def get_financials(self, symbol: str, dir_name: Optional[str] = None) -> dict[str, pd.DataFrame]:
-        store_dir = dir_name or "cn"
+        """Fetch detailed financial statements. dir_name overrides storage symbol."""
+        store_symbol = dir_name or symbol
         result = {}
         for name, fn in [("balance_sheet", self._ak.stock_balance_sheet_by_report_em),
                           ("income", self._ak.stock_profit_sheet_by_report_em),
@@ -72,14 +73,16 @@ class AKShareProvider:
             try:
                 df = self._cached(name, 86400, fn, symbol)
                 if df is not None and not df.empty:
-                    self._storage.save(df, "stock", store_dir, symbol, name)
+                    self._storage.save(df, "stock", "cn", store_symbol, name)
                     result[name] = df
-            except Exception:
-                pass
+            except Exception as e:
+                import sys
+                print(f"[dim]三张表 {name} 获取/保存异常: {e}[/dim]", file=sys.stderr)
         if not result:
             try:
                 df = self._cached("income_abstract", 86400, self._ak.stock_financial_abstract_ths, symbol)
                 if df is not None and not df.empty:
+                    self._storage.save(df, "stock", "cn", store_symbol, "income")
                     result["income"] = df
             except Exception:
                 pass

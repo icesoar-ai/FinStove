@@ -50,7 +50,7 @@ def financials(ticker: str, years: str):
 
     # 2. 详细三张表 (可能失败)
     try:
-        financials = p.get_financials(symbol)
+        financials = p.get_financials(symbol, dir_name=dir_name)
         if financials:
             for name, df in financials.items():
                 if df is not None and not df.empty:

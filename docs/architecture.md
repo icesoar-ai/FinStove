@@ -251,8 +251,13 @@ Typer + Rich:
 - `stocks-cli review <TICKER>` — 回顾历史判断
 
 ### Skills (`.claude/skills/`)
-每个 CLI 命令对应一个 Skill，Skill 只做编排（调 Python CLI），不含分析逻辑：
-- `/market-scan`, `/analyze-stock`, `/macro-check`, `/capital-flow`, `/sentiment-check`, `/correlation-check`, `/risk-check`, `/benchmark`, `/scenario`, `/full-report`, `/review`
+Skill 只做编排（调 Python CLI），不含分析逻辑：
+- `/fetch-stock` — 数据抓取 (ohlcv + financials + reports，可组合)
+- `/analyze-stock` — 技术分析
+- `/macro-check` — 宏观评估
+- `/valuation` — 估值分析 (10种方法)
+- `/full-report` — 综合多维分析
+- `/review` — 回顾历史判断
 
 ## 关键依赖
 
@@ -309,7 +314,7 @@ diskcache (SQLite缓存)
 ## 验证方案
 
 每个 Phase 结束后的验证：
-- **Phase 1**: `python -m src.cli.main fetch 600519.SH` 返回标准化的 OHLCV DataFrame
+- **Phase 1**: `python -m src.cli.main ohlcv 600519.SH` 返回标准化的 OHLCV DataFrame
 - **Phase 2**: `/analyze-stock 600519.SH` 输出技术面 + `/macro-check` 输出宏观评估
 - **Phase 3**: 每个 `/xxx-check` skill 可独立运行，返回有意义的分析
 - **Phase 4**: `/full-report 600519.SH` 输出 7 维度加权综合评分 + 判断 + 风险
@@ -329,8 +334,8 @@ diskcache (SQLite缓存)
 | 3 | 其余分析模块 (7个, 代码完成) | ✓ 代码完成 |
 | 3 | CNINFO 年报下载 + MarkItDown | ✓ 超出计划 |
 | 4 | 集成层 (scorer/aggregator/report) + 跟踪 | ✓ |
-| — | CLI 命令: fetch, analyze-stock, financials, reports, macro-check, full-report, review | ✓ |
-| — | Skills: /analyze-stock, /financials, /reports, /macro-check, /full-report, /review | ✓ |
+| — | CLI 命令: ohlcv, analyze-stock, financials, reports, macro-check, valuation, full-report, review | ✓ |
+| — | Skills: /fetch-stock, /analyze-stock, /macro-check, /valuation, /full-report, /review | ✓ |
 
 ### 待完成
 
