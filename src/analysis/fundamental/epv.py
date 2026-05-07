@@ -63,16 +63,21 @@ class EPVValuation(ValuationMethod):
         return None
 
     def _estimate_surplus_assets(self, bs) -> float:
+        import math
         if bs is None or bs.empty:
             return 0
-        cash = 0
-        total_liab = 0
+        cash = 0.0
+        total_liab = 0.0
         for col in bs.columns:
             col_l = str(col).lower()
             if "货币" in col_l or "现金" in col_l or "cash" in col_l:
-                cash = float(bs[col].iloc[-1] or 0)
+                val = bs[col].iloc[-1]
+                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                    cash = float(val)
             if "总负债" in col_l or "total_liab" in col_l or "负债合计" in col_l:
-                total_liab = float(bs[col].iloc[-1] or 0)
+                val = bs[col].iloc[-1]
+                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                    total_liab = float(val)
         return max(0, cash - total_liab * 0.3)
 
     def _get_shares(self, bs, inc):

@@ -66,17 +66,22 @@ class DDMValuation(ValuationMethod):
         return None
 
     def _extract_payout(self, inc, cf) -> float | None:
-        ni = 0
-        div = 0
+        import math
+        ni = 0.0
+        div = 0.0
         for col in inc.columns:
             col_l = str(col).lower()
             if "净利" in col_l or "net_income" in col_l:
-                ni = float(inc[col].iloc[-1] or 0)
+                val = inc[col].iloc[-1]
+                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                    ni = float(val)
         for df in ([cf] if cf is not None else []):
             for col in df.columns:
                 col_l = str(col).lower()
                 if "dividend" in col_l or "分红" in col_l or "股利" in col_l:
-                    div = abs(float(df[col].iloc[-1] or 0))
+                    val = df[col].iloc[-1]
+                    if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                        div = abs(float(val))
         if ni > 0 and div >= 0:
             return div / ni
         return 0.3  # default payout ratio

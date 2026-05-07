@@ -55,10 +55,13 @@ class ResidualIncomeValuation(ValuationMethod):
             return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, warnings=[f"RI计算异常: {e}"])
 
     def _extract_book_value(self, bs) -> float | None:
+        import math
         for col in bs.columns:
             col_l = str(col).lower()
             if "权益" in col_l or "equity" in col_l or "净资产" in col_l or "所有者权益" in col_l:
-                return float(bs[col].iloc[-1] or 0)
+                val = bs[col].iloc[-1]
+                if val is not None and not (isinstance(val, float) and math.isnan(val)):
+                    return float(val)
         return None
 
     def _extract_eps(self, inc) -> float | None:
