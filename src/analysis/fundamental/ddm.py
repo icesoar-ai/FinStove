@@ -22,13 +22,14 @@ class DDMValuation(ValuationMethod):
             if dps <= 0:
                 return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0.1, reason="模型不适用", warnings=["公司不分红，DDM 不适用"])
 
-            growth = self._estimate_dividend_growth(inc, cf)
+            growth = self._estimate_dividend_growth(inc, cf, dividends)
             growth = max(0.01, min(0.10, growth))
             required_return = 0.08
-            terminal_g = 0.025
 
-            if growth >= required_return:
-                growth = required_return - 0.01
+            # Ensure minimum 3% spread between required return and growth
+            # to prevent Gordon model explosion when r ≈ g
+            if required_return - growth < 0.03:
+                growth = required_return - 0.03
 
             gordon_value = dps * (1 + growth) / (required_return - growth)
 
@@ -46,9 +47,15 @@ class DDMValuation(ValuationMethod):
     def _extract_dps(self, inc, cf, dividends=None) -> float | None:
         # 1. Use dedicated dividend history if available
         if dividends is not None and not dividends.empty and "派息" in dividends.columns:
-            recent = dividends.tail(3)["派息"]  # average of last 3 dividends
-            if len(recent) > 0:
-                return float(recent.mean())
+            # Sum dividends per year, then average annual DPS over recent years
+            div = dividends.copy()
+            div["年份"] = div["公告日期"].dt.year
+            annual = div.groupby("年份")["派息"].sum()
+            if len(annual) >= 3:
+                recent_years = annual.tail(3)
+                return float(recent_years.mean())
+            elif len(annual) > 0:
+                return float(annual.mean())
 
         # 2. Try DPS column from income or cash flow statement
         for df_source in [inc, cf]:
@@ -107,8 +114,17 @@ class DDMValuation(ValuationMethod):
             return None  # Dividend data missing, can't estimate
         return 0.3
 
-    def _estimate_dividend_growth(self, inc, cf) -> float:
-        """Estimate sustainable dividend growth from earnings growth."""
+    def _estimate_dividend_growth(self, inc, cf, dividends=None) -> float:
+        # Prefer actual dividend growth from history
+        if dividends is not None and not dividends.empty and "派息" in dividends.columns:
+            div = dividends.copy()
+            div["年份"] = div["公告日期"].dt.year
+            annual = div.groupby("年份")["派息"].sum()
+            if len(annual) >= 4 and annual.iloc[-1] > 0 and annual.iloc[0] > 0:
+                cagr = (annual.iloc[-1] / annual.iloc[0]) ** (1 / (len(annual) - 1)) - 1
+                return max(0.01, min(0.10, cagr))
+
+        # Fallback: earnings growth as dividend growth proxy
         for col in inc.columns:
             col_l = str(col).lower()
             if "净利" in col_l or "net_income" in col_l:
