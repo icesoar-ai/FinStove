@@ -64,28 +64,42 @@ class AKShareProvider:
 
     # ---- Financial Statements ----
     def get_financials(self, symbol: str, dir_name: Optional[str] = None) -> dict[str, pd.DataFrame]:
-        """Fetch detailed financial statements. dir_name overrides storage symbol."""
+        """Fetch detailed financial statements via AKShare.
+
+        Uses stock_financial_*_ths (同花顺 backend) as primary source,
+        since stock_*_by_report_em (东方财富 backend) frequently breaks.
+        """
         store_symbol = dir_name or symbol
         result = {}
-        for name, fn in [("balance_sheet", self._ak.stock_balance_sheet_by_report_em),
-                          ("income", self._ak.stock_profit_sheet_by_report_em),
-                          ("cashflow", self._ak.stock_cash_flow_sheet_by_report_em)]:
+
+        sources = [
+            ("balance_sheet", self._ak.stock_financial_debt_ths),
+            ("income", self._ak.stock_financial_benefit_ths),
+            ("cashflow", self._ak.stock_financial_cash_ths),
+        ]
+
+        for name, fn in sources:
             try:
-                df = self._cached(name, 86400, fn, symbol)
+                df = fn(symbol)
                 if df is not None and not df.empty:
+                    # THS returns newest-first; sort ascending for correct iloc[-1]
+                    if "报告期" in df.columns:
+                        df = df.sort_values("报告期").reset_index(drop=True)
                     self._storage.save(df, "stock", "cn", store_symbol, name)
                     result[name] = df
-            except Exception as e:
-                import sys
-                print(f"[dim]三张表 {name} 获取/保存异常: {e}[/dim]", file=sys.stderr)
+            except Exception:
+                pass
+
         if not result:
+            # Ultimate fallback: financial summary
             try:
-                df = self._cached("income_abstract", 86400, self._ak.stock_financial_abstract_ths, symbol)
+                df = self._ak.stock_financial_abstract_ths(symbol)
                 if df is not None and not df.empty:
                     self._storage.save(df, "stock", "cn", store_symbol, "income")
                     result["income"] = df
             except Exception:
                 pass
+
         return result
 
     # ---- Major Indices ----

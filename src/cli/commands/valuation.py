@@ -106,6 +106,8 @@ def _normalize_summary(df: pd.DataFrame) -> pd.DataFrame:
             v = v.strip()
             if v in ("", "-", "--", "N/A", "None"):
                 return None
+            if v.endswith("万亿"):
+                return float(v[:-2]) * 1e12
             if v.endswith("亿"):
                 return float(v[:-1]) * 1e8
             if v.endswith("万"):
@@ -137,11 +139,16 @@ def valuation(ticker: str, format: str):
 
     console.print(f"[bold blue]Valuation: {dir_name}[/bold blue]")
 
-    # Load stored data
+    # Load stored data (normalize all — detailed statements may have
+    # formatted strings like '250.22亿' that methods can't parse.)
     financials = {}
     for dtype in ["balance_sheet", "income", "cashflow"]:
         df = storage.load("stock", "cn", dir_name, dtype)
         if not df.empty:
+            df = _normalize_summary(df)
+            # Drop columns that are entirely NaN after normalization
+            # (e.g. THS '六、每股收益' is a section header with no values)
+            df = df.dropna(axis=1, how="all")
             financials[dtype] = df
 
     summary = storage.load("stock", "cn", dir_name, "financials")

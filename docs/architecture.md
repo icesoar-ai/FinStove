@@ -355,7 +355,7 @@ diskcache (SQLite缓存)
 
 **基本面 (Phase 3 遗留):**
 - [ ] 财报文本分析 (MarkItDown 已集成, 提取会计政策/关联交易/风险因素/管理层展望)
-- [ ] AKShare 三张表接口不稳定 → 需要替代数据源或等待上游修复
+- [x] AKShare 三张表接口不稳定 → 已切换到同花顺 stock_financial_*_ths，三张表稳定可用
 
 **Phase 5 打磨:**
 - [ ] JSON 输出 + 配置管理命令
