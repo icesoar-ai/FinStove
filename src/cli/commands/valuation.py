@@ -174,6 +174,22 @@ def valuation(ticker: str, format: str):
         if not has_bs:
             financials["balance_sheet"] = summary
 
+    # Patch: if balance_sheet 股本 is 0/NaN, use summary's derived 总股本
+    if has_bs and "summary" in financials and "总股本" in summary.columns:
+        bs = financials["balance_sheet"]
+        shares_valid = False
+        for col in bs.columns:
+            col_l = str(col).lower()
+            if "股本" in col_l or "share" in col_l:
+                val = bs[col].iloc[-1] if len(bs) > 0 else 0
+                if val is not None and val > 0:
+                    shares_valid = True
+                break
+        if not shares_valid:
+            derived = summary["总股本"].dropna()
+            if len(derived) > 0:
+                bs["总股本(推算)"] = float(derived.iloc[-1])
+
     if not financials or (not has_income and not has_bs and "summary" not in financials):
         console.print(f"[red]缺少财务数据[/red]")
         console.print(f"[dim]请先运行 /fetch-stock {ticker} 获取数据[/dim]")
