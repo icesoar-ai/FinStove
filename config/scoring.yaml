@@ -1,0 +1,42 @@
+contexts:
+  long_term_investment:
+    dimensions:
+      fundamental: 0.40
+      macro: 0.20
+      policy: 0.15
+      technical: 0.10
+      correlation: 0.05
+      flow: 0.05
+      sentiment: 0.05
+    description: "侧重内在价值和长期趋势"
+
+  short_term_trading:
+    dimensions:
+      technical: 0.35
+      flow: 0.25
+      sentiment: 0.20
+      macro: 0.10
+      correlation: 0.05
+      fundamental: 0.03
+      policy: 0.02
+    description: "侧重技术面和资金面信号"
+
+  macro_assessment:
+    dimensions:
+      macro: 0.40
+      policy: 0.25
+      correlation: 0.20
+      flow: 0.10
+      sentiment: 0.05
+    description: "纯宏观视角"
+
+thresholds:
+  strong_buy: 1.0
+  buy: 0.3
+  hold: -0.3
+  sell: -1.0
+  strong_sell: -1.0
+
+confidence:
+  min_results_for_score: 3
+  low_confidence_threshold: 0.4

@@ -1,0 +1,54 @@
+app:
+  name: "Stocks Analysis Assistant"
+  version: "0.1.0"
+  locale: "zh-CN"
+  timezone: "Asia/Shanghai"
+
+data:
+  storage_dir: "data"
+  cache:
+    backend: "diskcache"
+    directory: "~/.cache/stocks"
+    default_ttl: 3600
+    ttl_overrides:
+      realtime: 60
+      daily: 86400
+      financials: 86400
+      macro: 86400
+      news: 1800
+
+  limits:
+    request_timeout: 30
+    max_retries: 3
+    retry_backoff: 2.0
+    concurrent_requests: 5
+
+analysis:
+  defaults:
+    lookback_bars: 250
+    ma_periods: [5, 10, 20, 60, 120, 250]
+    rsi_period: 14
+    macd_fast: 12
+    macd_slow: 26
+    macd_signal: 9
+
+  fundamental:
+    dcf:
+      projection_years: 5
+      terminal_growth: 0.025
+      default_erp: 0.06
+    pe_band_lookback_years: 5
+
+  macro:
+    yield_curve_spread: "10Y-2Y"
+    recession_threshold: -0.5
+
+output:
+  default_format: "standard"
+  color: true
+  report:
+    template_dir: "config/templates"
+    include_disclaimer: true
+    disclaimer_text: |
+      本报告基于公开免费数据源生成，仅供参考，不构成投资建议。
+      数据可能存在延迟或错误，请以官方披露为准。

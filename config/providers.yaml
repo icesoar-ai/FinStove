@@ -1,0 +1,49 @@
+routing:
+  - markets: [CN]
+    asset_type: stock
+    primary: akshare
+  - markets: [HK, US, JP, UK, DE, FR]
+    asset_type: stock
+    primary: yfinance
+
+  - markets: [CN]
+    asset_type: index
+    primary: akshare
+  - markets: [HK, US, JP, UK, DE, FR]
+    asset_type: index
+    primary: yfinance
+
+  - markets: [CN]
+    asset_type: bond
+    primary: akshare
+  - markets: [US]
+    asset_type: bond
+    primary: fred
+
+  - asset_type: forex
+    primary: yfinance
+
+  - asset_type: commodity
+    primary: yfinance
+
+  - asset_type: crypto
+    primary: coingecko
+    fallback: [yfinance]
+
+  - markets: [CN]
+    asset_type: macro
+    primary: akshare
+  - markets: [US, JP, UK, DE, FR]
+    asset_type: macro
+    primary: fred
+
+  - markets: [CN]
+    asset_type: news
+    primary: news_cn
+  - markets: [US, HK, JP, UK, DE, FR]
+    asset_type: news
+    primary: news_global
+
+credentials:
+  fred:
+    api_key: "${FRED_API_KEY}"
