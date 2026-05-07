@@ -237,7 +237,7 @@ src/track/
 - **Report**: Jinja2 模板 → markdown，三档(brief ~20行/standard ~60行/full ~200行)
 
 ### CLI (`src/cli/`)
-Typer + Rich:
+Click + Rich:
 - `stocks-cli market-scan` — 多市场概览
 - `stocks-cli analyze-stock <TICKER>` — 个股深度
 - `stocks-cli macro-check` — 宏观环境

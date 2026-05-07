@@ -45,6 +45,39 @@ class CNINFOProvider:
         r.raise_for_status()
         return r.json()
 
+    def _resolve_org_id(self, symbol: str) -> str:
+        """Resolve CNINFO orgId for a stock symbol.
+
+        Tries the legacy gssh/gssz format first; if that returns empty,
+        searches by symbol and extracts the real orgId from the response.
+        """
+        # Try legacy format first
+        stock_id = self._build_stock_id(symbol)
+        resp = self._fetch_page(stock_id, 1, 1)
+        if resp.get("announcements"):
+            return stock_id
+
+        # Fallback: search by symbol to discover orgId
+        data = {
+            "pageNum": 1, "pageSize": 1,
+            "column": "szse", "tabName": "fulltext",
+            "plate": "", "stock": "",
+            "searchkey": symbol, "secid": "",
+            "category": "category_ndbg_szsh",
+            "trade": "", "seDate": "",
+            "sortName": "", "sortType": "",
+            "isHLtitle": "true",
+        }
+        r = requests.post(self.BASE_URL, data=data, timeout=self.TIMEOUT)
+        r.raise_for_status()
+        resp = r.json()
+        anns = resp.get("announcements") or []
+        if anns:
+            org_id = anns[0].get("orgId", "")
+            if org_id:
+                return f"{symbol},{org_id}"
+        return stock_id
+
     def _parse_time(self, t) -> str:
         if isinstance(t, (int, float)):
             from datetime import datetime
@@ -57,7 +90,7 @@ class CNINFOProvider:
 
     def list_reports(self, symbol: str) -> list[dict]:
         """List all annual reports (年报 + 年报摘要) for a stock."""
-        stock_id = self._build_stock_id(symbol)
+        stock_id = self._resolve_org_id(symbol)
         resp = self._fetch_page(stock_id, 1, 50)
         announcements = resp.get("announcements") or []
         results = []
