@@ -46,9 +46,16 @@ class ParquetStorage:
         try:
             df.to_parquet(path, index=False)
         except Exception:
-            # PyArrow type inference fails on mixed object columns (e.g. strings
-            # mixed with bool, or '1.85%' formatted strings). Fallback: stringify all.
-            df.astype(str).to_parquet(path, index=False)
+            # PyArrow type inference fails on mixed object columns.
+            # Fallback: convert numeric-looking columns to float, rest to string.
+            df_fixed = df.copy()
+            for col in df_fixed.columns:
+                if df_fixed[col].dtype == object:
+                    try:
+                        df_fixed[col] = pd.to_numeric(df_fixed[col], errors='ignore')
+                    except Exception:
+                        df_fixed[col] = df_fixed[col].astype(str, errors='ignore')
+            df_fixed.to_parquet(path, index=False)
 
     # ---- Incremental merge ----
 

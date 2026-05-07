@@ -4,7 +4,7 @@ from typing import Optional
 import pandas as pd
 
 from ..cache import DataCache
-from ..normalizer import standardize
+from ..normalizer import standardize, normalize_financials
 from ..storage import ParquetStorage
 
 
@@ -85,6 +85,8 @@ class AKShareProvider:
                     # THS returns newest-first; sort ascending for correct iloc[-1]
                     if "报告期" in df.columns:
                         df = df.sort_values("报告期").reset_index(drop=True)
+                    # Normalize formatted strings ("88.54 亿", "60.42%") to floats
+                    df = normalize_financials(df)
                     self._storage.save(df, "stock", "cn", store_symbol, name)
                     result[name] = df
             except Exception:

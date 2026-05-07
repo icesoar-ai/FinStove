@@ -65,6 +65,27 @@
 
 Parquet 是真正的数据源（`src/data/storage.py`），SQLite 只是 API 去重缓存（`src/data/cache.py`）。
 
+**Parquet 存储路径规则：**
+
+```
+data/{asset_type}/{market}/{symbol}/{data_type}.parquet
+```
+
+| asset_type | market | symbol 示例 | data_type |
+|-----------|--------|-----------|-----------|
+| stock | cn | 600795_国电电力 | daily, balance_sheet, income, cashflow, financials |
+| stock | us | AAPL | daily, balance_sheet, income, cashflow |
+| stock | hk | 00700 | daily, balance_sheet, income, cashflow |
+| index | cn | 000001 | daily |
+| macro | cn | cpi, pmi, shibor | daily, monthly |
+| flow | cn | northbound, southbound | daily |
+| commodity | global | gold, oil | daily |
+| forex | global | dxy | daily |
+| crypto | global | btc | daily |
+
+- **symbol 格式**：`{code}_{name}`，如 `600795_国电电力`。股票名称从 `data/stock_names.json` 缓存获取，未命中时调用 AKShare API 查询并缓存。
+- **PDF/MD 报告**：`data/stock/cn/{code}_{name}/reports/{year} 年年度报告.md/.pdf`
+
 **数据获取流程：**
 
 ```
@@ -365,6 +386,8 @@ diskcache (SQLite缓存)
 - [ ] 可选 Streamlit dashboard
 
 **数据质量:**
+- [x] 同花顺财务数据清洗 (normalize_financials, 2026-05-07) — 存储层统一转换带单位字符串为浮点数
+- [x] 估值方法失败原因标注 (reason 字段, 2026-05-07) — 区分"数据缺失"、"模型不适用"、"结果不合理"
 - [ ] A股幸存者偏差处理 (退市公司历史)
 - [ ] 前视偏差检测 (财报发布日期 vs 截止日)
 - [ ] 复权数据校验

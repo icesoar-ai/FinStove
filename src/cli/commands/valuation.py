@@ -234,12 +234,24 @@ def _display(results: list[ValuationResult], agg: dict, name: str, fmt: str):
             vl = f"{r.value_low:.2f}" if r.value_low > 0 else "—"
             vh = f"{r.value_high:.2f}" if r.value_high > 0 else "—"
             conf = f"{r.confidence:.0%}"
-            if r.warnings:
-                note = "; ".join(r.warnings[:2])
-            elif r.assumptions:
-                note = ", ".join(f"{k}={v}" for k, v in list(r.assumptions.items())[:4])
+
+            # Build note: show reason if no value, otherwise show assumptions
+            if r.fair_value <= 0:
+                parts = []
+                if r.reason:
+                    parts.append(f"[yellow]{r.reason}[/yellow]")
+                if r.warnings:
+                    parts.extend(r.warnings[:2])
+                elif r.assumptions:
+                    parts.append(", ".join(f"{k}={v}" for k, v in list(r.assumptions.items())[:3]))
+                note = "; ".join(parts) if parts else ""
             else:
-                note = ""
+                if r.warnings:
+                    note = "; ".join(r.warnings[:2])
+                elif r.assumptions:
+                    note = ", ".join(f"{k}={v}" for k, v in list(r.assumptions.items())[:4])
+                else:
+                    note = ""
             table.add_row(r.method, fv, vl, vh, conf, note[:70])
 
         console.print(table)

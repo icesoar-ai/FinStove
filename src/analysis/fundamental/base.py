@@ -15,6 +15,7 @@ class ValuationResult:
     confidence: float         # 0.0 to 1.0
     assumptions: dict = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    reason: str = ""          # why no value: "数据缺失", "模型不适用", "结果为负", etc.
 
 
 class ValuationMethod(ABC):

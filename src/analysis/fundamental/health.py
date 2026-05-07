@@ -13,12 +13,11 @@ class FinancialHealthCheck(ValuationMethod):
         inc = financials.get("income", None)
 
         if bs is None or bs.empty:
-            return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, warnings=["无资产负债表数据"])
+            return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, reason="数据缺失", warnings=["无资产负债表数据"])
 
         try:
             signals = []
 
-            # Altman Z-Score (simplified for non-US firms)
             z = self._altman_z(bs, inc)
             if z is not None:
                 if z > 3.0:
@@ -28,7 +27,6 @@ class FinancialHealthCheck(ValuationMethod):
                 else:
                     signals.append((f"Z={z:.1f}，财务困境风险", "bearish", 0.7))
 
-            # Current ratio
             cr = self._current_ratio(bs)
             if cr is not None:
                 if cr > 2.0:
@@ -38,7 +36,6 @@ class FinancialHealthCheck(ValuationMethod):
                 else:
                     signals.append((f"流动比率{cr:.1f}，流动性紧张", "bearish", 0.5))
 
-            # Quick ratio
             qr = self._quick_ratio(bs)
             if qr is not None:
                 if qr > 1.0:
@@ -46,7 +43,6 @@ class FinancialHealthCheck(ValuationMethod):
                 elif qr < 0.5:
                     signals.append((f"速动比率{qr:.1f}，偏低", "bearish", 0.4))
 
-            # D/E trend
             de = self._debt_equity(bs)
             if de is not None:
                 if de < 0.5:
@@ -56,7 +52,6 @@ class FinancialHealthCheck(ValuationMethod):
                 else:
                     signals.append((f"D/E={de:.2f}，高杠杆", "bearish", 0.5))
 
-            # ROE DuPont
             roe = self._roe(bs, inc)
             if roe is not None:
                 if roe > 0.20:
@@ -71,7 +66,7 @@ class FinancialHealthCheck(ValuationMethod):
                     signals.append((f"ROE={roe:.1%}，亏损", "bearish", 0.6))
 
             if not signals:
-                return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0.1, warnings=["无法计算财务健康指标"])
+                return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0.1, reason="数据不足", warnings=["无法计算财务健康指标"])
 
             bullish = sum(s[2] for s in signals if s[1] == "bullish")
             bearish = sum(s[2] for s in signals if s[1] == "bearish")
@@ -85,10 +80,9 @@ class FinancialHealthCheck(ValuationMethod):
                 assumptions={},
             )
         except Exception as e:
-            return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, warnings=[f"财务健康分析异常: {e}"])
+            return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, reason="计算异常", warnings=[f"财务健康分析异常：{e}"])
 
     def _altman_z(self, bs, inc) -> float | None:
-        """Simplified Z-Score for non-manufacturing firms."""
         try:
             wc = self._get_bs_value(bs, ["流动资产", "current_asset"])
             ta = self._get_bs_value(bs, ["总资产", "total_asset"])
@@ -135,21 +129,31 @@ class FinancialHealthCheck(ValuationMethod):
         return ni / eq if ni is not None and eq and eq > 0 else None
 
     def _get_bs_value(self, bs, keys: list[str]) -> float | None:
+        import math
         if bs is None or bs.empty:
             return None
         for col in bs.columns:
             col_l = str(col).lower()
             if any(k.lower() in col_l for k in keys):
                 vals = bs[col].dropna()
-                return float(vals.iloc[-1]) if len(vals) > 0 else None
+                if len(vals) > 0:
+                    val = vals.iloc[-1]
+                    if isinstance(val, float) and math.isnan(val):
+                        return None
+                    return float(val)
         return None
 
     def _get_is_value(self, inc, keys: list[str]) -> float | None:
+        import math
         if inc is None or inc.empty:
             return None
         for col in inc.columns:
             col_l = str(col).lower()
             if any(k.lower() in col_l for k in keys):
                 vals = inc[col].dropna()
-                return float(vals.iloc[-1]) if len(vals) > 0 else None
+                if len(vals) > 0:
+                    val = vals.iloc[-1]
+                    if isinstance(val, float) and math.isnan(val):
+                        return None
+                    return float(val)
         return None
