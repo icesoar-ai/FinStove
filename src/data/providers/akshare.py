@@ -32,29 +32,27 @@ class AKShareProvider:
     # ---- Stock OHLCV (with Parquet incremental) ----
 
     def get_daily(self, symbol: str, start: str = "20100101", end: Optional[str] = None,
-                  market: str = "cn") -> pd.DataFrame:
+                  market: str = "cn", dir_name: Optional[str] = None) -> pd.DataFrame:
+        """Fetch daily OHLCV. dir_name overrides the storage directory (e.g. '600388_龙净环保')."""
         if end is None:
             end = date.today().strftime("%Y%m%d")
 
-        # Check Parquet for existing data
-        existing = self._storage.load("stock", market, symbol, "daily")
+        store_dir = dir_name or market
+
+        existing = self._storage.load("stock", store_dir, symbol, "daily")
         if not existing.empty:
-            # Find last date in existing data
-            _, last_date = self._storage.get_date_range("stock", market, symbol, "daily")
+            _, last_date = self._storage.get_date_range("stock", store_dir, symbol, "daily")
             if last_date:
-                # Only fetch from day after last date
                 start = (last_date + timedelta(days=1)).strftime("%Y%m%d")
                 if start >= end:
-                    return existing  # Already up to date
+                    return existing
 
-        # Fetch new data
         new_df = self._cached("get_daily", 86400, self._ak.stock_zh_a_hist, symbol, "daily", start, end, "qfq")
 
         if new_df is None or new_df.empty:
             return existing if not existing.empty else pd.DataFrame()
 
-        # Merge and save
-        return self._storage.merge_and_save(new_df, "stock", market, symbol, "daily")
+        return self._storage.merge_and_save(new_df, "stock", store_dir, symbol, "daily")
 
     # ---- Stock Info ----
     def get_info(self, symbol: str) -> dict:
@@ -65,7 +63,8 @@ class AKShareProvider:
             return {}
 
     # ---- Financial Statements ----
-    def get_financials(self, symbol: str) -> dict[str, pd.DataFrame]:
+    def get_financials(self, symbol: str, dir_name: Optional[str] = None) -> dict[str, pd.DataFrame]:
+        store_dir = dir_name or "cn"
         result = {}
         for name, fn in [("balance_sheet", self._ak.stock_balance_sheet_by_report_em),
                           ("income", self._ak.stock_profit_sheet_by_report_em),
@@ -73,7 +72,7 @@ class AKShareProvider:
             try:
                 df = self._cached(name, 86400, fn, symbol)
                 if df is not None and not df.empty:
-                    self._storage.save(df, "stock", "cn", symbol, name)
+                    self._storage.save(df, "stock", store_dir, symbol, name)
                     result[name] = df
             except Exception:
                 pass

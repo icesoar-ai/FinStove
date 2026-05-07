@@ -31,14 +31,16 @@ def fetch(ticker: str, start: str, end: str):
     symbol, market = parse_ticker(ticker)
     cache = DataCache()
     registry = ProviderRegistry(cache)
+    from src.utils.ticker import stock_dir
+    dir_name = stock_dir(symbol) if market == Market.CN else symbol
 
-    console.print(f"[bold]Fetching {symbol} (market={market.value})[/bold]")
+    console.print(f"[bold]Fetching {dir_name} (market={market.value})[/bold]")
 
     try:
         if market == Market.CN:
             start_fmt = start.replace("-", "") if "-" in start else start
             end_fmt = end.replace("-", "") if "-" in end else end
-            df = registry.akshare.get_daily(symbol, start_fmt, end_fmt)
+            df = registry.akshare.get_daily(symbol, start_fmt, end_fmt, dir_name=dir_name)
         else:
             df = registry.yfinance.get_daily(symbol, market.value, start, end)
 
@@ -48,7 +50,7 @@ def fetch(ticker: str, start: str, end: str):
 
         console.print(f"[green]{len(df)} rows[/green]")
 
-        table = Table(title=f"{symbol} OHLCV")
+        table = Table(title=f"{dir_name} OHLCV")
         table.add_column("Date", style="cyan")
         table.add_column("Open", justify="right")
         table.add_column("High", justify="right")

@@ -19,10 +19,13 @@ def financials(ticker: str, years: str):
         console.print("[red]财报下载仅支持A股[/red]")
         return
 
+    from src.utils.ticker import stock_dir
+
     s = ParquetStorage()
     p = AKShareProvider(storage=s)
+    dir_name = stock_dir(symbol)
 
-    console.print(f"[bold]Fetching financials for {symbol}...[/bold]")
+    console.print(f"[bold]Fetching financials for {dir_name}...[/bold]")
 
     # 1. 财务摘要 (可靠)
     try:
@@ -31,7 +34,7 @@ def financials(ticker: str, years: str):
         fin = ak.stock_financial_abstract_ths(symbol=symbol)
         fin["报告期_dt"] = pd.to_datetime(fin["报告期"])
         recent = fin[fin["报告期_dt"] >= "2021-01-01"].drop(columns=["报告期_dt"])
-        s.save(recent, "stock", "cn", symbol, "financials")
+        s.save(recent, "stock", "cn", dir_name, "financials")
         console.print(f"[green]财务摘要: {len(recent)} 期[/green]")
 
         # Filter by years
