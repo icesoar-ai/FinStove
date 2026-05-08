@@ -86,6 +86,40 @@ class ParquetStorage:
         self.save(combined, asset_type, market, symbol, data_type)
         return combined
 
+    # ---- Intraday merge (datetime-level dedup) ----
+
+    def merge_intraday(self, df: pd.DataFrame, asset_type: str, market: str, symbol: str, interval: str) -> pd.DataFrame:
+        """Merge intraday data, dedup by full datetime (not date-only).
+
+        Args:
+            df: New intraday DataFrame with a 'datetime' or 'time' column.
+            interval: Bar interval (e.g. '1m', '5m', '15m', '30m', '60m', '1h').
+        """
+        data_type = f"intraday_{interval}"
+        existing = self.load(asset_type, market, symbol, data_type)
+
+        if existing.empty:
+            if df is not None and not df.empty:
+                self.save(df, asset_type, market, symbol, data_type)
+            return df if df is not None else pd.DataFrame()
+
+        combined = pd.concat([existing, df], ignore_index=True)
+
+        # Find datetime column
+        time_col = None
+        for c in combined.columns:
+            if c.lower() in ("datetime", "time", "时间"):
+                time_col = c
+                break
+
+        if time_col:
+            combined[time_col] = pd.to_datetime(combined[time_col])
+            combined = combined.drop_duplicates(subset=[time_col], keep="last")
+            combined = combined.sort_values(time_col).reset_index(drop=True)
+
+        self.save(combined, asset_type, market, symbol, data_type)
+        return combined
+
     # ---- Date range ----
 
     def get_date_range(self, asset_type: str, market: str, symbol: str, data_type: str) -> tuple[Optional[date], Optional[date]]:

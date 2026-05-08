@@ -37,7 +37,11 @@ docs/               # 文档 (architecture.md, data-structure.md)
 ## CLI 命令
 
 ```bash
-python -m src.cli.main ohlcv <TICKER>              # 拉取日线 OHLCV
+python -m src.cli.main spot                        # 实时行情概览
+python -m src.cli.main spot -m cn [hk] [us]       # 涨跌榜
+python -m src.cli.main spot <TICKER>               # 个股实时行情
+python -m src.cli.main intraday <TICKER> [-i 5m]   # 盘中分钟K线
+python -m src.cli.main ohlcv <TICKER> [--intraday] # 拉取日线 OHLCV
 python -m src.cli.main financials <TICKER>         # 财务数据
 python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
 python -m src.cli.main analyze-stock <TICKER>      # 技术分析
@@ -68,6 +72,8 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
 - `/spot` — 实时行情查询（全球指数/外汇/商品/加密货币/A股/港股/美股）
+- `/spot` — 实时行情（全球指数/外汇/商品/加密货币/个股）
+- `/intraday <TICKER>` — 盘中分钟K线（自动切换AKShare/yfinance）
 - `/review <TICKER>` — 回顾历史判断
 
 ## 已实现模块
@@ -77,7 +83,8 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 | 数据 | AKShare (A股日线/指数/宏观/三张表 via 同花顺) | 可用 |
 | 数据 | YFinance (全球股票/商品/外汇/指数/加密货币) | 可用 (受速率限制) |
 | 数据 | CNINFO (年报PDF+MD) | 可用 |
-| 数据 | 实时行情 (AKShare spot / CoinGecko) | 可用 (受东方财富限流) |
+| 数据 | 实时行情 (YFinance 概览 + AKShare 个股) | 可用 |
+| 数据 | 盘中分钟K线 (AKShare → yfinance 自动降级) | 可用 |
 | 数据 | Parquet 存储 + 增量获取 | 可用 |
 | 分析 | 技术分析 | 可用 |
 | 分析 | 宏观分析 | 可用 (中国数据) |

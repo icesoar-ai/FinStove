@@ -73,11 +73,15 @@ data/
 │       └── southbound/      └── daily.parquet   # 南向资金
 └── stock_names.json  # A股名称缓存
 
-# 实时快照（通过 fetch 命令 --spot flag 生成，单行覆盖写入）
+# 实时快照（通过 fetch --spot flag 生成，单行覆盖写入）
 # data/index/{market}/{CODE}/spot.parquet
 # data/commodity/global/{CODE}/spot.parquet
 # data/forex/global/{PAIR}/spot.parquet
 # data/crypto/global/{CODE}/spot.parquet
+
+# 盘中分钟K线（通过 intraday 命令或 ohlcv --intraday flag 生成，datetime 去重）
+# data/stock/{market}/{CODE}/intraday_{interval}.parquet
+# 例: data/stock/cn/600388_龙净环保/intraday_5m.parquet
 ```
 
 ## 命名规则
@@ -86,7 +90,7 @@ data/
 |------|------|
 | **目录层级** | `资产类别 > 市场(或global) > 代码` |
 | **品种目录** | A股: `{CODE}_{名称}`，其余: `{CODE}` |
-| **频率** | `daily.parquet` / `monthly.parquet` / `quarterly.parquet` |
+| **频率** | `daily.parquet` / `monthly.parquet` / `quarterly.parquet` / `intraday_{interval}.parquet` |
 | **格式** | Apache Parquet (Snappy 压缩) |
 
 ## 核心品种码表

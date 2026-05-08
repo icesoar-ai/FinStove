@@ -328,3 +328,49 @@ class AKShareProvider:
     def get_crypto_spot(self) -> pd.DataFrame:
         """Crypto spot quotes from major exchanges. TTL=30s."""
         return self._cached("crypto_spot", 30, self._ak.crypto_js_spot)
+
+    # ---- Intraday (minute bars) ----
+
+    def get_intraday(self, symbol: str, period: str = "5", start: str = None,
+                     end: str = None, adjust: str = "qfq") -> pd.DataFrame:
+        """A-share minute-level OHLCV via Eastmoney.
+
+        Args:
+            symbol: 6-digit stock code.
+            period: Bar interval in minutes — '1', '5', '15', '30', '60'.
+            start: Start datetime string, e.g. '2026-05-08 09:30:00'.
+            end: End datetime string.
+            adjust: 'qfq' (forward), 'hfq' (backward), '' (none).
+        """
+        from datetime import datetime, timedelta
+
+        if end is None:
+            end = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if start is None:
+            start = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d 00:00:00")
+
+        # Bypass _cached — standardize() strips time via .dt.date
+        try:
+            df = self._ak.stock_zh_a_hist_min_em(
+                symbol=symbol, period=period,
+                start_date=start, end_date=end, adjust=adjust,
+            )
+        except Exception:
+            return pd.DataFrame()
+
+        if df is None or df.empty:
+            return pd.DataFrame()
+
+        # Map Chinese columns to English, preserve full datetime
+        col_map = {
+            "时间": "datetime", "开盘": "open", "收盘": "close",
+            "最高": "high", "最低": "low", "成交量": "volume",
+            "成交额": "amount", "振幅": "amplitude",
+            "涨跌幅": "chg_pct", "涨跌额": "chg_amt", "换手率": "turnover",
+        }
+        df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
+        if "datetime" in df.columns:
+            df["datetime"] = pd.to_datetime(df["datetime"])
+            df = df.sort_values("datetime").reset_index(drop=True)
+
+        return df

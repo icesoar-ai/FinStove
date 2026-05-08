@@ -403,3 +403,46 @@ class YFinanceProvider:
             return existing if not existing.empty else pd.DataFrame()
 
         return self._storage.merge_and_save(df, "crypto", "global", symbol.upper(), "daily")
+
+    # ---- Intraday (minute bars) ----
+
+    def get_intraday(self, ticker: str, market: str = "us", interval: str = "5m",
+                     period: str = "5d") -> pd.DataFrame:
+        """Global minute-level OHLCV via Yahoo Finance.
+
+        Args:
+            ticker: Symbol (e.g. 'AAPL', '000001').
+            market: Market code ('cn', 'us', 'hk', etc.).
+            interval: Bar interval — '1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h'.
+            period: Lookback — '1d', '5d', '1mo'. Limited by interval:
+                    1m max 7d, 2m-90m max 60d, 1h max 730d.
+        """
+        sym = self._build_symbol(ticker, market)
+        tk = self._yf.Ticker(sym)
+        try:
+            df = tk.history(interval=interval, period=period)
+        except Exception:
+            return pd.DataFrame()
+
+        if df is None or df.empty:
+            return pd.DataFrame()
+
+        df = df.reset_index()
+        col_map = {
+            "Datetime": "datetime", "Date": "datetime",
+            "Open": "open", "High": "high", "Low": "low",
+            "Close": "close", "Volume": "volume",
+        }
+        df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
+        if "datetime" in df.columns:
+            df["datetime"] = pd.to_datetime(df["datetime"])
+            df = df.sort_values("datetime").reset_index(drop=True)
+
+        # Drop timezone info for clean storage
+        if "datetime" in df.columns and hasattr(df["datetime"].dtype, "tz"):
+            try:
+                df["datetime"] = df["datetime"].dt.tz_localize(None)
+            except Exception:
+                pass
+
+        return df
