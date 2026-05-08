@@ -221,6 +221,7 @@ src/track/
 
 ### CLI (`src/cli/`)
 Click + Rich:
+- `stocks-cli spot [TICKER]` — 实时行情查询（概览/涨跌榜/个股/自选）
 - `stocks-cli market-scan` — 多市场概览
 - `stocks-cli analyze-stock <TICKER>` — 个股深度
 - `stocks-cli macro-check` — 宏观环境
@@ -246,6 +247,7 @@ Skill 只做编排（调 Python CLI），不含分析逻辑：
 - `/macro-check` — 宏观评估
 - `/valuation` — 估值分析 (10种方法)
 - `/full-report` — 综合多维分析
+- `/spot` — 实时行情（全球指数/外汇/商品/加密货币/个股）
 - `/review` — 回顾历史判断
 
 ## 关键依赖
@@ -326,6 +328,7 @@ diskcache (SQLite缓存)
 | — | CLI 命令: ohlcv, analyze-stock, financials, reports, macro-check, valuation, full-report, review | ✓ |
 | — | Skills: /fetch-stock, /analyze-stock, /macro-check, /valuation, /full-report, /review | ✓ |
 | — | 全球资产数据: commodity/forex/crypto/yield-curve CLI + Skills, index 统一为全球入口 | ✓ 2026-05-08 |
+| — | 实时行情: /spot 命令 (概览/涨跌榜/个股/自选) + fetch --spot flag | ✓ 2026-05-08 |
 
 ### 待完成
 

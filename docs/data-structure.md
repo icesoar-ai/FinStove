@@ -72,6 +72,12 @@ data/
 │       ├── northbound/      └── daily.parquet   # 北向资金
 │       └── southbound/      └── daily.parquet   # 南向资金
 └── stock_names.json  # A股名称缓存
+
+# 实时快照（通过 fetch 命令 --spot flag 生成，单行覆盖写入）
+# data/index/{market}/{CODE}/spot.parquet
+# data/commodity/global/{CODE}/spot.parquet
+# data/forex/global/{PAIR}/spot.parquet
+# data/crypto/global/{CODE}/spot.parquet
 ```
 
 ## 命名规则
