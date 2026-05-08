@@ -23,6 +23,7 @@ from src.cli.commands.commodity import commodity_data
 from src.cli.commands.forex import forex_data
 from src.cli.commands.crypto import crypto_data
 from src.cli.commands.yield_curve import yield_curve_data
+from src.cli.commands.spot import spot
 from src.cli.commands.summary import daily_summary
 
 
@@ -46,6 +47,7 @@ cli.add_command(commodity_data)
 cli.add_command(forex_data)
 cli.add_command(crypto_data)
 cli.add_command(yield_curve_data)
+cli.add_command(spot)
 cli.add_command(daily_summary)
 
 

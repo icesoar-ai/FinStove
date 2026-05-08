@@ -298,3 +298,33 @@ class AKShareProvider:
         if df is not None and not df.empty:
             return self._storage.merge_and_save(df, *key)
         return existing if not existing.empty else pd.DataFrame()
+
+    # ---- Spot / Real-Time Quotes (cached, no Parquet persistence) ----
+
+    def get_a_share_spot(self) -> pd.DataFrame:
+        """Real-time A-share quotes (沪深京). TTL=30s."""
+        return self._cached("a_share_spot", 30, self._ak.stock_zh_a_spot_em)
+
+    def get_index_spot(self) -> pd.DataFrame:
+        """Global index spot prices. TTL=30s."""
+        return self._cached("index_spot", 30, self._ak.index_global_spot_em)
+
+    def get_forex_spot(self) -> pd.DataFrame:
+        """Forex spot rates (all pairs). TTL=30s."""
+        return self._cached("forex_spot", 30, self._ak.forex_spot_em)
+
+    def get_futures_spot(self) -> pd.DataFrame:
+        """Global futures spot prices. TTL=30s."""
+        return self._cached("futures_spot", 30, self._ak.futures_global_spot_em)
+
+    def get_hk_stock_spot(self) -> pd.DataFrame:
+        """HK stock real-time quotes. TTL=30s."""
+        return self._cached("hk_spot", 30, self._ak.stock_hk_spot_em)
+
+    def get_us_stock_spot(self) -> pd.DataFrame:
+        """US stock real-time quotes (delayed 15min). TTL=30s."""
+        return self._cached("us_spot", 30, self._ak.stock_us_spot_em)
+
+    def get_crypto_spot(self) -> pd.DataFrame:
+        """Crypto spot quotes from major exchanges. TTL=30s."""
+        return self._cached("crypto_spot", 30, self._ak.crypto_js_spot)

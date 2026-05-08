@@ -28,7 +28,8 @@ CRYPTOS = {
 @click.option("--start", default="2015-01-01", help="Start date")
 @click.option("--end", default="", help="End date (default: today)")
 @click.option("--source", default="yfinance", help="Data source: yfinance (default) | coingecko")
-def crypto_data(symbol: str, start: str, end: str, source: str):
+@click.option("--spot", is_flag=True, default=False, help="Also save a real-time spot snapshot")
+def crypto_data(symbol: str, start: str, end: str, source: str, spot: bool):
     """Fetch cryptocurrency daily OHLCV (BTC, ETH, SOL, etc.).
 
     Default source: yfinance (fast, no rate limit).
@@ -94,5 +95,32 @@ def crypto_data(symbol: str, start: str, end: str, source: str):
 
             console.print(table)
 
+            # Spot snapshot
+            if spot:
+                _save_spot_crypto(cache, storage, sym)
+
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
+
+
+def _save_spot_crypto(cache, storage, sym: str):
+    import pandas as pd
+    from src.data.providers.coingecko import CoinGeckoProvider
+    try:
+        cg = CoinGeckoProvider(cache=cache)
+        md = cg.get_market_data(sym)
+        if md:
+            spot_df = pd.DataFrame([{
+                "symbol": sym,
+                "price": md.get("price"),
+                "change_24h": md.get("change_24h"),
+                "change_7d": md.get("change_7d"),
+                "market_cap": md.get("market_cap"),
+                "volume_24h": md.get("volume_24h"),
+            }])
+            storage.save(spot_df, "crypto", "global", sym, "spot")
+            console.print(f"  [dim]Spot snapshot saved[/dim]")
+        else:
+            console.print(f"  [yellow]Spot data not found for {sym}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]  Spot fetch failed: {e}[/yellow]")

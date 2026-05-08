@@ -34,7 +34,8 @@ MARKET_MAP = {
 @click.argument("symbol", required=False)
 @click.option("--start", default="2010-01-01", help="Start date")
 @click.option("--end", default="", help="End date (default: today)")
-def index_data(market: str, symbol: str, start: str, end: str):
+@click.option("--spot", is_flag=True, default=False, help="Also save a real-time spot snapshot")
+def index_data(market: str, symbol: str, start: str, end: str, spot: bool):
     """Fetch stock index daily data — CN + global markets.
 
     \b
@@ -71,12 +72,12 @@ def index_data(market: str, symbol: str, start: str, end: str):
 
     for mkt in markets_order:
         if mkt == "cn":
-            _fetch_cn(cache, storage, symbol, start, end)
+            _fetch_cn(cache, storage, symbol, start, end, spot)
         else:
-            _fetch_global(mkt, symbol, start, end, cache, storage)
+            _fetch_global(mkt, symbol, start, end, cache, storage, spot)
 
 
-def _fetch_cn(cache, storage, symbol: str, start: str, end: str):
+def _fetch_cn(cache, storage, symbol: str, start: str, end: str, spot: bool):
     """Fetch CN indices via AKShare."""
     from src.data.providers.akshare import AKShareProvider
 
@@ -92,11 +93,14 @@ def _fetch_cn(cache, storage, symbol: str, start: str, end: str):
             end_fmt = end.replace("-", "") if "-" in end else end
             df = ak.get_index_daily(sym, start_fmt, end_fmt)
             _display_table(df, f"{sym} ({name}) [CN]")
+
+            if spot:
+                _save_spot_index(cache, storage, sym, "cn", name)
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
 
 
-def _fetch_global(mkt: str, symbol: str, start: str, end: str, cache, storage):
+def _fetch_global(mkt: str, symbol: str, start: str, end: str, cache, storage, spot: bool):
     """Fetch global indices via Yahoo Finance."""
     from src.data.providers.yfinance import YFinanceProvider
 
@@ -114,8 +118,50 @@ def _fetch_global(mkt: str, symbol: str, start: str, end: str, cache, storage):
         try:
             df = yf.get_index_daily(sym, market=mkt, start=start, end=end)
             _display_table(df, f"{sym} ({name}) [{info['label']}]")
+
+            if spot:
+                _save_spot_index(cache, storage, sym, mkt, name)
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
+
+
+# Index name → CN index code mapping for spot lookup
+_INDEX_SPOT_NAME_MAP = {
+    "上证指数": "000001", "深证成指": "399001", "沪深300": "000300",
+    "上证50": "000016", "创业板指": "399006", "科创50": "000688", "中证500": "000905",
+}
+
+# Global index names in index_global_spot_em
+_INDEX_SPOT_GLOBAL_KW = {
+    "SPX": "标普", "NDX": "纳斯达克", "DJI": "道琼斯", "RUT": "罗素",
+    "VIX": "VIX", "HSI": "恒生", "N225": "日经225", "FTSE": "英国富时100",
+    "DAX": "德国DAX", "CAC": "法国CAC",
+}
+
+
+def _save_spot_index(cache, storage, sym: str, market: str, name: str):
+    from src.data.providers.akshare import AKShareProvider
+    try:
+        ak = AKShareProvider(cache=cache)
+        idx_df = ak.get_index_spot()
+        if idx_df.empty:
+            return
+
+        # Try exact name match first, then keyword match
+        row = idx_df[idx_df["名称"] == name]
+        if row.empty and market == "cn":
+            row = idx_df[idx_df["代码"] == sym]
+        if row.empty:
+            kw = _INDEX_SPOT_GLOBAL_KW.get(sym, name)
+            row = idx_df[idx_df["名称"].str.contains(kw, na=False)]
+
+        if not row.empty:
+            storage.save(row.head(1), "index", market, sym, "spot")
+            console.print(f"  [dim]Spot snapshot saved[/dim]")
+        else:
+            console.print(f"  [yellow]Spot data not found for {sym}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]  Spot fetch failed: {e}[/yellow]")
 
 
 def _display_table(df, title: str):

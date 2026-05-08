@@ -27,7 +27,8 @@ FOREX_PAIRS = {
 @click.argument("pair", required=False)
 @click.option("--start", default="2010-01-01", help="Start date")
 @click.option("--end", default="", help="End date (default: today)")
-def forex_data(pair: str, start: str, end: str):
+@click.option("--spot", is_flag=True, default=False, help="Also save a real-time spot snapshot")
+def forex_data(pair: str, start: str, end: str, spot: bool):
     """Fetch forex pair daily rates (USD/CNY, EUR/CNY, JPY/CNY, etc.).
 
     No pair: fetches all 9 forex pairs.
@@ -80,5 +81,32 @@ def forex_data(pair: str, start: str, end: str):
 
             console.print(table)
 
+            # Spot snapshot
+            if spot:
+                _save_spot_forex(cache, storage, p)
+
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
+
+
+_FOREX_SPOT_KW = {
+    "USDCNY": "美元/人民币", "EURCNY": "欧元/人民币", "JPYCNY": "日元/人民币",
+    "EURUSD": "欧元/美元", "USDJPY": "美元/日元", "GBPUSD": "英镑/美元",
+    "AUDUSD": "澳元/美元", "USDCAD": "美元/加元", "GBPCNY": "英镑/人民币",
+}
+
+
+def _save_spot_forex(cache, storage, pair: str):
+    from src.data.providers.akshare import AKShareProvider
+    try:
+        ak = AKShareProvider(cache=cache)
+        fx_df = ak.get_forex_spot()
+        kw = _FOREX_SPOT_KW.get(pair, pair)
+        row = fx_df[fx_df["名称"].str.contains(kw, na=False)]
+        if not row.empty:
+            storage.save(row.head(1), "forex", "global", pair, "spot")
+            console.print(f"  [dim]Spot snapshot saved[/dim]")
+        else:
+            console.print(f"  [yellow]Spot data not found for {pair}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]  Spot fetch failed: {e}[/yellow]")
