@@ -1,3 +1,12 @@
+import os
+from pathlib import Path
+
+# Load environment variables from .env file
+env_path = Path(__file__).resolve().parents[3] / ".env"
+if env_path.exists():
+    from dotenv import load_dotenv
+    load_dotenv(env_path)
+
 import click
 
 from src.cli.commands.stock import analyze_stock

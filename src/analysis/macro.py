@@ -72,17 +72,20 @@ class MacroAnalyzer(AbstractAnalyzer):
             curve = md.get("yield_curve", {}).get(country, {})
             if not curve:
                 continue
-            if "10Y" in curve and "2Y" in curve:
-                spread = curve["10Y"] - curve["2Y"]
-                label = f"{'美国' if country == 'US' else '中国'}收益率曲线"
-                if spread < self.YIELD_CURVE_INVERSION_THRESH:
-                    signals.append(Signal(label, "bearish", 0.6, f"倒挂 {spread:.2f}%，衰退预警"))
-                elif spread < 0:
-                    signals.append(Signal(label, "bearish", 0.4, f"轻微倒挂 {spread:.2f}%"))
-                elif spread < 0.5:
-                    signals.append(Signal(label, "neutral", 0.3, f"扁平 {spread:.2f}%"))
-                else:
-                    signals.append(Signal(label, "bullish", 0.4, f"正常陡峭 {spread:.2f}%"))
+            tenor_10y = curve.get("10Y")
+            tenor_2y = curve.get("2Y")
+            if tenor_10y is None or tenor_2y is None:
+                continue
+            spread = float(tenor_10y) - float(tenor_2y)
+            label = f"{'美国' if country == 'US' else '中国'}收益率曲线"
+            if spread < self.YIELD_CURVE_INVERSION_THRESH:
+                signals.append(Signal(label, "bearish", 0.6, f"倒挂 {spread:.2f}%，衰退预警"))
+            elif spread < 0:
+                signals.append(Signal(label, "bearish", 0.4, f"轻微倒挂 {spread:.2f}%"))
+            elif spread < 0.5:
+                signals.append(Signal(label, "neutral", 0.3, f"扁平 {spread:.2f}%"))
+            else:
+                signals.append(Signal(label, "bullish", 0.4, f"正常陡峭 {spread:.2f}%"))
         return signals
 
     def _policy_rates(self, md: dict) -> list[Signal]:

@@ -8,7 +8,7 @@ from src.analysis.macro import MacroAnalyzer
 from src.data.base import Market as MktEnum
 from src.data.cache import DataCache
 from src.data.models import Ticker as TickerModel
-from src.data.registry import ProviderRegistry
+from src.data.macro_data import get_all_macro_data
 
 console = Console()
 
@@ -20,33 +20,12 @@ def macro_check(country: str):
     countries = [c.strip().upper() for c in country.split(",")]
     console.print(f"[bold blue]Macro Check: {', '.join(countries)}[/bold blue]")
 
-    cache = DataCache()
-    registry = ProviderRegistry(cache)
-    macro_data: dict = {}
+    # Fetch all macro data from CN + US sources
+    macro_data = get_all_macro_data()
 
-    for c in countries:
-        try:
-            if c == "CN":
-                cpi_df = registry.akshare.get_cpi()
-                if not cpi_df.empty and "今值" in cpi_df.columns:
-                    last_val = cpi_df["今值"].dropna().iloc[-1]
-                    macro_data.setdefault("cpi_yoy", {})["CN"] = float(last_val)
-
-                pmi_df = registry.akshare.get_pmi()
-                if not pmi_df.empty and "今值" in pmi_df.columns:
-                    last_val = pmi_df["今值"].dropna().iloc[-1]
-                    macro_data.setdefault("pmi", {})["CN"] = float(last_val)
-
-                shibor_df = registry.akshare.get_shibor()
-                if not shibor_df.empty and "今值" in shibor_df.columns:
-                    on_val = shibor_df.iloc[0]["今值"]
-                    macro_data.setdefault("shibor", {})["ON"] = float(on_val)
-
-        except Exception as e:
-            console.print(f"[yellow]Warning: {c} macro data fetch error: {e}[/yellow]")
-
-    if not macro_data:
+    if not macro_data or all(not v for v in macro_data.values()):
         console.print("[red]No macro data available.[/red]")
+        console.print("[yellow]Hint: Set FRED_API_KEY env var for US data (https://fred.stlouisfed.org/docs/api/api_key.html)[/yellow]")
         return
 
     tk = TickerModel(raw="MACRO", market=MktEnum.CN, symbol="MACRO")
@@ -56,7 +35,7 @@ def macro_check(country: str):
 
     color = "green" if result.score > 0.3 else ("red" if result.score < -0.3 else "yellow")
     panel = Panel(
-        f"[{color}]综合评分: {result.score:+.1f}[/{color}] | 置信度: {result.confidence:.0%}",
+        f"[{color}]综合评分：{result.score:+.1f}[/{color}] | 置信度：{result.confidence:.0%}",
         title="[bold]宏观环境评估[/bold]",
         border_style=color,
     )
@@ -74,6 +53,33 @@ def macro_check(country: str):
             table.add_row(s.name, emoji, f"{s.strength:.0%}", s.description)
         console.print(table)
 
-    if result.warnings:
-        for w in result.warnings:
-            console.print(f"[yellow]Warning: {w}[/yellow]")
+    # Display raw data summary
+    console.print("\n[bold]数据摘要:[/bold]")
+    if macro_data.get("policy_rate"):
+        for c, v in macro_data["policy_rate"].items():
+            console.print(f"  {c} 政策利率：{v:.2f}%")
+    if macro_data.get("cpi_yoy"):
+        for c, v in macro_data["cpi_yoy"].items():
+            console.print(f"  {c} CPI 同比：{v:.1f}%")
+    if macro_data.get("gdp_growth"):
+        for c, v in macro_data["gdp_growth"].items():
+            console.print(f"  {c} GDP 增速：{v:.1f}%")
+    if macro_data.get("pmi"):
+        for c, v in macro_data["pmi"].items():
+            console.print(f"  {c} PMI: {v:.1f}")
+    if macro_data.get("yield_curve"):
+        for c, curve in macro_data["yield_curve"].items():
+            if curve:
+                s10y = curve.get("10Y", "N/A")
+                s2y = curve.get("2Y", "N/A")
+                if s10y and s2y:
+                    spread = float(s10y) - float(s2y)
+                    console.print(f"  {c} 收益率曲线：10Y={s10y:.2f}%, 2Y={s2y:.2f}%, 利差={spread:+.2f}%")
+    if macro_data.get("dxy"):
+        console.print(f"  美元指数 (DXY): {macro_data['dxy']:.1f}")
+    if macro_data.get("crypto"):
+        for coin, data in macro_data["crypto"].items():
+            if data.get("price"):
+                chg = data.get("change_24h")
+                chg_str = f"{chg:+.1f}%" if chg else "N/A"
+                console.print(f"  {coin.upper()}: ${data['price']:,.0f} (24h {chg_str})")

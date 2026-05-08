@@ -66,8 +66,8 @@ class AKShareProvider:
     def get_dividends(self, symbol: str, dir_name: Optional[str] = None) -> pd.DataFrame:
         """Fetch historical dividend records via AKShare.
 
-        Returns DataFrame with columns: 公告日期, 派息, 送股, 转增, 进度,
-        除权除息日, 股权登记日, 红股上市日.
+        Returns DataFrame with columns: 公告日期，派息，送股，转增，进度，
+        除权除息日，股权登记日，红股上市日.
         Only includes "实施" (executed) records.
         """
         store_symbol = dir_name or symbol
@@ -148,7 +148,14 @@ class AKShareProvider:
         return self._cached("southbound", 86400, self._ak.stock_hsgt_south_net_flow_in_em, start, end)
 
     # ---- Macro (with Parquet) ----
+
     def get_shibor(self) -> pd.DataFrame:
+        """Fetch SHIBOR rates for all tenors.
+
+        Uses macro_china_shibor_all which returns all tenors in one call.
+
+        Returns DataFrame with columns: 报告日，ON, 1W, 2W, 1M, 3M, 6M, 9M, 1Y
+        """
         key = ("macro", "cn", "shibor", "daily")
         existing = self._storage.load(*key)
         if not existing.empty:
@@ -156,15 +163,46 @@ class AKShareProvider:
             if last and last >= date.today() - timedelta(days=1):
                 return existing
 
-        df = pd.DataFrame()
         try:
-            df = self._cached("shibor", 86400, self._ak.rate_interbank, market="上海银行同业拆借市场", symbol="Shibor人民币")
+            df = self._cached("shibor_all", 86400, self._ak.macro_china_shibor_all)
+            if df is not None and not df.empty:
+                # Rename columns to standard format: O/N-定价 -> ON, 1W-定价 -> 1W, etc.
+                rename_map = {}
+                for col in df.columns:
+                    if col.endswith('-定价'):
+                        tenor = col.replace('-定价', '').replace('O/N', 'ON')
+                        rename_map[col] = tenor
+
+                df = df.rename(columns=rename_map)
+                # Keep only date and tenor columns (standardize converts '日期' to 'date')
+                tenors = ['ON', '1W', '2W', '1M', '3M', '6M', '9M', '1Y']
+                keep_cols = ['date'] + [t for t in tenors if t in df.columns]
+                df = df[keep_cols].copy()
+                df = df.rename(columns={'date': '报告日'})
+                df = df.sort_values('报告日').reset_index(drop=True)
+                return self._storage.merge_and_save(df, *key)
         except Exception:
             pass
 
-        if df is not None and not df.empty:
-            return self._storage.merge_and_save(df, *key)
         return existing if not existing.empty else pd.DataFrame()
+
+    def get_shibor_latest(self) -> dict:
+        """Get latest SHIBOR rates as dict {tenor: rate}.
+
+        Convenience method for getting current rates without loading full history.
+        """
+        df = self.get_shibor()
+        if df.empty:
+            return {}
+
+        result = {}
+        tenors = ["ON", "1W", "2W", "1M", "3M", "6M", "9M", "1Y"]
+        for tenor in tenors:
+            if tenor in df.columns:
+                val = df.iloc[-1][tenor]
+                if pd.notna(val):
+                    result[tenor] = float(val)
+        return result
 
     def get_cpi(self) -> pd.DataFrame:
         key = ("macro", "cn", "cpi", "monthly")

@@ -361,8 +361,9 @@ diskcache (SQLite缓存)
 ### 待完成
 
 **数据源 (Phase 3 遗留):**
-- [ ] `providers/fred.py` — 美国宏观数据 (FRED)
-- [ ] `providers/coingecko.py` — 加密货币数据
+- [x] `providers/fred.py` — 美国宏观数据 (FRED) — 2026-05-08
+- [x] `providers/coingecko.py` — 加密货币数据 — 2026-05-08
+- [x] DXY 美元指数 (yfinance) — 2026-05-08
 - [ ] `providers/news.py` — RSS 新闻抓取 + NLP 情绪
 
 **CLI + Skills (Phase 3 遗留):**
@@ -375,7 +376,7 @@ diskcache (SQLite缓存)
 - [ ] `scenario` — 情景分析 `/scenario`
 
 **基本面 (Phase 3 遗留):**
-- [ ] 财报文本分析 (MarkItDown 已集成, 提取会计政策/关联交易/风险因素/管理层展望)
+- [ ] 财报文本分析 (MarkItDown 已集成，提取会计政策/关联交易/风险因素/管理层展望)
 - [x] AKShare 三张表接口不稳定 → 已切换到同花顺 stock_financial_*_ths，三张表稳定可用
 
 **Phase 5 打磨:**
@@ -388,12 +389,14 @@ diskcache (SQLite缓存)
 **数据质量:**
 - [x] 同花顺财务数据清洗 (normalize_financials, 2026-05-07) — 存储层统一转换带单位字符串为浮点数
 - [x] 估值方法 NaN 传播修复 (2026-05-07) — 所有 10 个方法的 float(x or 0) 陷阱已修复
-- [x] 估值方法失败原因标注 (reason 字段, 2026-05-07) — 区分"数据缺失"、"模型不适用"、"结果不合理"
+- [x] 估值方法失败原因标注 (reason 字段，2026-05-07) — 区分"数据缺失"、"模型不适用"、"结果不合理"
 - [x] 分红数据抓取 (ak.stock_history_dividend_detail, 2026-05-07) — 存储为 dividends.parquet，DDM 优先使用
 - [x] DDM 参数修复 (2026-05-07) — 年度化 DPS、分红 CAGR 替代净利润增长、3% 最小利差防 Gordon 爆炸
 - [x] 股本数据修补 (2026-05-07) — BS 股本为 0 时从摘要 净利润/EPS 反推
 - [x] DDM 分红单位自适应 (2026-05-08) — A 股"元/10 股"、港股/美股"元/股"，根据 Market enum 自动转换
 - [x] normalizer.py 函数补全 (2026-05-08) — 修复 normalize_dates/normalize_columns 缺失导致技术分析报错
-- [ ] A股幸存者偏差处理 (退市公司历史)
+- [x] SHIBOR 数据获取修复 (2026-05-08) — 使用 macro_china_shibor_all 获取全期限利率
+- [x] 宏观数据聚合器 (2026-05-08) — 整合 CN(AKShare) + US(FRED) + DXY + Crypto
+- [ ] A 股幸存者偏差处理 (退市公司历史)
 - [ ] 前视偏差检测 (财报发布日期 vs 截止日)
 - [ ] 复权数据校验

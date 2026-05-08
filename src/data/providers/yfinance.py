@@ -132,3 +132,52 @@ class YFinanceProvider:
     def get_index(self, symbol: str, market: str = "us", start: str = "2010-01-01",
                   end: Optional[str] = None) -> pd.DataFrame:
         return self.get_generic(self._build_symbol(symbol, market, "index"), start, end)
+
+    # ---- DXY (US Dollar Index) ----
+
+    def get_dxy(self, start: str = "2010-01-01", end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch US Dollar Index (DXY) historical data.
+
+        DXY measures USD against a basket of 6 major currencies.
+        Ticker: DX-Y.NYB (ICE Futures U.S.)
+
+        Stores to: data/forex/dxy.parquet
+        """
+        if end is None:
+            end = date.today().strftime("%Y-%m-%d")
+
+        existing = self._storage.load("forex", "global", "dxy", "daily")
+        if not existing.empty:
+            _, last_date = self._storage.get_date_range("forex", "global", "dxy", "daily")
+            if last_date and last_date >= date.today() - timedelta(days=7):
+                return existing
+
+        try:
+            # DX-Y.NYB is the ICE futures ticker; fallback to USDX if available
+            df = self.get_generic("DX-Y.NYB", start, end)
+            if df is None or df.empty:
+                df = self.get_generic("USDX", start, end)
+        except Exception:
+            df = pd.DataFrame()
+
+        if df is None or df.empty:
+            return existing if not existing.empty else pd.DataFrame()
+
+        return self._storage.merge_and_save(df, "forex", "global", "dxy", "daily")
+
+    def get_dxy_current(self) -> Optional[float]:
+        """Get current DXY level (most recent value)."""
+        try:
+            df = self.get_dxy()
+            if not df.empty and "close" in df.columns:
+                return float(df.iloc[-1]["close"])
+        except Exception:
+            pass
+        # Fallback: try to read from existing parquet
+        try:
+            df = self._storage.load("forex", "global", "dxy", "daily")
+            if not df.empty and "close" in df.columns:
+                return float(df.iloc[-1]["close"])
+        except Exception:
+            pass
+        return None
