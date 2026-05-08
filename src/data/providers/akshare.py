@@ -127,14 +127,33 @@ class AKShareProvider:
 
     # ---- Major Indices ----
     def get_index_daily(self, symbol: str, start: str = "20100101", end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch daily index OHLCV with Parquet persistence.
+
+        Storage path: data/index/cn/{symbol}/daily.parquet
+        """
         if end is None:
             end = date.today().strftime("%Y%m%d")
+
         index_map = {
             "000001": "sh000001", "399001": "sz399001", "000300": "sh000300",
             "000016": "sh000016", "399006": "sz399006", "000688": "sh000688", "000905": "sh000905",
         }
         sym = index_map.get(symbol, f"sh{symbol}" if symbol.startswith(("0", "6")) else f"sz{symbol}")
-        return self._cached("get_index", 86400, self._ak.stock_zh_index_daily_em, sym, start, end)
+
+        key = ("index", "cn", symbol, "daily")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            _, last = self._storage.get_date_range(*key)
+            if last and last >= date.today() - timedelta(days=1):
+                return existing
+            start = (last + timedelta(days=1)).strftime("%Y%m%d")
+            if start >= end:
+                return existing
+
+        df = self._cached("get_index", 86400, self._ak.stock_zh_index_daily_em, sym, start, end)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
 
     # ---- Northbound / Southbound Flow ----
     def get_northbound(self, start: str = "20100101", end: Optional[str] = None) -> pd.DataFrame:

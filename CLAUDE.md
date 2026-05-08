@@ -37,6 +37,7 @@ python -m src.cli.main financials <TICKER>         # 财务数据
 python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
 python -m src.cli.main analyze-stock <TICKER>      # 技术分析
 python -m src.cli.main macro-check                 # 宏观评估
+python -m src.cli.main index [CODE]               # 指数数据
 python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
 python -m src.cli.main full-report <TICKER>        # 综合多维分析
 python -m src.cli.main review <TICKER>             # 回顾历史判断
@@ -72,5 +73,5 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - 详细三张表使用同花顺接口 (stock_financial_*_ths)，已替代不稳定的东方财富接口
 - CoinGecko/news provider 未实现
 - 美股/港股/商品/外汇/加密数据未接入
-- 宏观/指数/资金流向数据部分未缓存（CN 宏观已缓存，US 宏观已缓存到 Parquet）
+- 宏观/资金流向数据部分未缓存（CN+US 宏观已缓存，CN 指数已缓存）
 - yfinance 有速率限制

@@ -76,7 +76,7 @@ data/{asset_type}/{market}/{symbol}/{data_type}.parquet
 | stock | cn | 600795_国电电力 | daily, balance_sheet, income, cashflow, financials |
 | stock | us | AAPL | daily, balance_sheet, income, cashflow |
 | stock | hk | 00700 | daily, balance_sheet, income, cashflow |
-| index | cn | 000001 | daily |
+| index | cn | 000001, 399001, 000300, 000016, 399006, 000688, 000905 | daily |
 | macro | cn | cpi, pmi, shibor | daily, monthly |
 | macro | us | cpi, core_cpi, fed_funds_rate, gdp, unemployment, treasury_10y, treasury_2y, treasury_1y, treasury_3m, consumer_sentiment | daily, monthly, quarterly |
 | flow | cn | northbound, southbound | daily |
