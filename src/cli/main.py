@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # Load environment variables from .env file
-env_path = Path(__file__).resolve().parents[3] / ".env"
+env_path = Path(__file__).resolve().parents[2] / ".env"
 if env_path.exists():
     from dotenv import load_dotenv
     load_dotenv(env_path)
@@ -19,7 +19,10 @@ from src.cli.commands.full_report import full_report
 from src.cli.commands.review import review
 from src.cli.commands.index_data import index_data
 from src.cli.commands.flow import flow_data
-from src.cli.commands.us_index import us_index
+from src.cli.commands.commodity import commodity_data
+from src.cli.commands.forex import forex_data
+from src.cli.commands.crypto import crypto_data
+from src.cli.commands.yield_curve import yield_curve_data
 
 
 @click.group()
@@ -38,7 +41,10 @@ cli.add_command(full_report)
 cli.add_command(review)
 cli.add_command(index_data)
 cli.add_command(flow_data)
-cli.add_command(us_index)
+cli.add_command(commodity_data)
+cli.add_command(forex_data)
+cli.add_command(crypto_data)
+cli.add_command(yield_curve_data)
 
 
 if __name__ == "__main__":

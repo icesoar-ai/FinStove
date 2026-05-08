@@ -27,7 +27,9 @@ FRED_SERIES = {
     "UNEMPLOYMENT": "UNRATE",  # 失业率 (月)
     "NONFARM_PAYROLLS": "PAYEMS",  # 非农就业人数 (月)
     # 收益率曲线 (日)
+    "TREASURY_30Y": "DGS30",  # 30 年期国债收益率
     "TREASURY_10Y": "DGS10",  # 10 年期国债收益率
+    "TREASURY_5Y": "DGS5",  # 5 年期国债收益率
     "TREASURY_2Y": "DGS2",  # 2 年期国债收益率
     "TREASURY_1Y": "DGS1",  # 1 年期国债收益率
     "TREASURY_3M": "DGS3MO",  # 3 个月期国债收益率
@@ -52,7 +54,9 @@ FRED_STORAGE_KEYS = {
     "GDPYOY": ("macro", "us", "gdp_yoy", "quarterly"),
     "UNRATE": ("macro", "us", "unemployment", "monthly"),
     "PAYEMS": ("macro", "us", "nonfarm_payrolls", "monthly"),
+    "DGS30": ("macro", "us", "treasury_30y", "daily"),
     "DGS10": ("macro", "us", "treasury_10y", "daily"),
+    "DGS5": ("macro", "us", "treasury_5y", "daily"),
     "DGS2": ("macro", "us", "treasury_2y", "daily"),
     "DGS1": ("macro", "us", "treasury_1y", "daily"),
     "DGS3MO": ("macro", "us", "treasury_3m", "daily"),
@@ -104,7 +108,6 @@ class FREDProvider:
         df = fn()
         if df is None or df.empty:
             return pd.DataFrame()
-        df = df.reset_index()
         df.columns = [c.lower().replace(" ", "_") for c in df.columns]
         if self._cache:
             self._cache.set("fred", series_id, df, ttl=86400 * 7)
@@ -213,13 +216,15 @@ class FREDProvider:
         return None
 
     def get_yield_curve(self) -> dict[str, Optional[float]]:
-        """Get Treasury yield curve: overnight, 3M, 1Y, 2Y, 10Y.
+        """Get Treasury yield curve: 3M, 1Y, 2Y, 5Y, 10Y, 30Y.
 
         Returns dict with tenor -> yield mappings.
         """
         result = {}
         mapping = {
+            "30Y": FRED_SERIES["TREASURY_30Y"],
             "10Y": FRED_SERIES["TREASURY_10Y"],
+            "5Y": FRED_SERIES["TREASURY_5Y"],
             "2Y": FRED_SERIES["TREASURY_2Y"],
             "1Y": FRED_SERIES["TREASURY_1Y"],
             "3M": FRED_SERIES["TREASURY_3M"],
@@ -298,7 +303,9 @@ class FREDProvider:
             # Fetch all tenors
             data = {}
             for tenor, series_id in [
+                ("30Y", FRED_SERIES["TREASURY_30Y"]),
                 ("10Y", FRED_SERIES["TREASURY_10Y"]),
+                ("5Y", FRED_SERIES["TREASURY_5Y"]),
                 ("2Y", FRED_SERIES["TREASURY_2Y"]),
                 ("1Y", FRED_SERIES["TREASURY_1Y"]),
             ]:

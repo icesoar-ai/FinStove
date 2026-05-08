@@ -37,6 +37,89 @@ US_INDEX_NAMES = {
     "VIX": "CBOE Volatility Index",
 }
 
+GLOBAL_INDEX_NAMES = {
+    **US_INDEX_NAMES,
+    "HSI": "Hang Seng Index",
+    "N225": "Nikkei 225",
+    "FTSE": "FTSE 100",
+    "DAX": "DAX 40",
+    "CAC": "CAC 40",
+}
+
+COMMODITY_TICKERS = {
+    "GC": "GC=F",
+    "SI": "SI=F",
+    "CL": "CL=F",
+    "BZ": "BZ=F",
+    "NG": "NG=F",
+    "HG": "HG=F",
+    "ZC": "ZC=F",
+    "ZS": "ZS=F",
+    "PL": "PL=F",
+    "PA": "PA=F",
+}
+
+COMMODITY_NAMES = {
+    "GC": "COMEX Gold",
+    "SI": "COMEX Silver",
+    "CL": "WTI Crude Oil",
+    "BZ": "Brent Crude Oil",
+    "NG": "Natural Gas",
+    "HG": "COMEX Copper",
+    "ZC": "CBOT Corn",
+    "ZS": "CBOT Soybean",
+    "PL": "NYMEX Platinum",
+    "PA": "NYMEX Palladium",
+}
+
+FOREX_PAIRS = {
+    "USDCNY": "USDCNY=X",
+    "EURCNY": "EURCNY=X",
+    "JPYCNY": "JPYCNY=X",
+    "EURUSD": "EURUSD=X",
+    "USDJPY": "USDJPY=X",
+    "GBPUSD": "GBPUSD=X",
+    "AUDUSD": "AUDUSD=X",
+    "USDCAD": "USDCAD=X",
+    "GBPCNY": "GBPCNY=X",
+}
+
+FOREX_NAMES = {
+    "USDCNY": "USD/CNY",
+    "EURCNY": "EUR/CNY",
+    "JPYCNY": "JPY/CNY",
+    "EURUSD": "EUR/USD",
+    "USDJPY": "USD/JPY",
+    "GBPUSD": "GBP/USD",
+    "AUDUSD": "AUD/USD",
+    "USDCAD": "USD/CAD",
+    "GBPCNY": "GBP/CNY",
+}
+
+CRYPTO_TICKERS = {
+    "BTC": "BTC-USD",
+    "ETH": "ETH-USD",
+    "SOL": "SOL-USD",
+    "BNB": "BNB-USD",
+    "XRP": "XRP-USD",
+    "DOGE": "DOGE-USD",
+    "ADA": "ADA-USD",
+    "LINK": "LINK-USD",
+    "DOT": "DOT-USD",
+}
+
+CRYPTO_NAMES = {
+    "BTC": "Bitcoin",
+    "ETH": "Ethereum",
+    "SOL": "Solana",
+    "BNB": "BNB",
+    "XRP": "XRP",
+    "DOGE": "Dogecoin",
+    "ADA": "Cardano",
+    "LINK": "Chainlink",
+    "DOT": "Polkadot",
+}
+
 
 class YFinanceProvider:
     def __init__(self, cache: Optional[DataCache] = None, storage: Optional[ParquetStorage] = None):
@@ -220,3 +303,103 @@ class YFinanceProvider:
         except Exception:
             pass
         return None
+
+    # ---- Commodity Daily (with Parquet incremental) ----
+
+    def get_commodity_daily(self, symbol: str, start: str = "2010-01-01",
+                           end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch commodity futures daily OHLCV with Parquet persistence.
+
+        Storage path: data/commodity/global/{symbol}/daily.parquet
+        Commodity futures are continuous front-month contracts (e.g. GC=F).
+        """
+        if end is None:
+            end = date.today().strftime("%Y-%m-%d")
+
+        ticker = COMMODITY_TICKERS.get(symbol.upper(), f"{symbol.upper()}=F")
+
+        existing = self._storage.load("commodity", "global", symbol.upper(), "daily")
+        if not existing.empty:
+            _, last_date = self._storage.get_date_range("commodity", "global", symbol.upper(), "daily")
+            if last_date and last_date >= date.today() - timedelta(days=1):
+                return existing
+            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
+            if start >= end:
+                return existing
+
+        try:
+            df = self.get_generic(ticker, start, end)
+        except Exception:
+            df = pd.DataFrame()
+
+        if df is None or df.empty:
+            return existing if not existing.empty else pd.DataFrame()
+
+        return self._storage.merge_and_save(df, "commodity", "global", symbol.upper(), "daily")
+
+    # ---- Forex Daily (with Parquet incremental) ----
+
+    def get_forex_daily(self, pair: str, start: str = "2010-01-01",
+                        end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch forex pair daily OHLCV with Parquet persistence.
+
+        Storage path: data/forex/global/{pair}/daily.parquet
+        """
+        if end is None:
+            end = date.today().strftime("%Y-%m-%d")
+
+        ticker = FOREX_PAIRS.get(pair.upper(), f"{pair.upper()}=X")
+
+        existing = self._storage.load("forex", "global", pair.upper(), "daily")
+        if not existing.empty:
+            _, last_date = self._storage.get_date_range("forex", "global", pair.upper(), "daily")
+            if last_date and last_date >= date.today() - timedelta(days=1):
+                return existing
+            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
+            if start >= end:
+                return existing
+
+        try:
+            df = self.get_generic(ticker, start, end)
+        except Exception:
+            df = pd.DataFrame()
+
+        if df is None or df.empty:
+            return existing if not existing.empty else pd.DataFrame()
+
+        return self._storage.merge_and_save(df, "forex", "global", pair.upper(), "daily")
+
+    # ---- Crypto Daily (with Parquet incremental) ----
+
+    def get_crypto_daily(self, symbol: str, start: str = "2015-01-01",
+                         end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch cryptocurrency daily OHLCV with Parquet persistence.
+
+        Uses Yahoo Finance as data source (faster, no rate limit).
+        For market cap data, use CoinGeckoProvider instead.
+
+        Storage path: data/crypto/global/{symbol}/daily.parquet
+        """
+        if end is None:
+            end = date.today().strftime("%Y-%m-%d")
+
+        ticker = CRYPTO_TICKERS.get(symbol.upper(), f"{symbol.upper()}-USD")
+
+        existing = self._storage.load("crypto", "global", symbol.upper(), "daily")
+        if not existing.empty:
+            _, last_date = self._storage.get_date_range("crypto", "global", symbol.upper(), "daily")
+            if last_date and last_date >= date.today() - timedelta(days=1):
+                return existing
+            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
+            if start >= end:
+                return existing
+
+        try:
+            df = self.get_generic(ticker, start, end)
+        except Exception:
+            df = pd.DataFrame()
+
+        if df is None or df.empty:
+            return existing if not existing.empty else pd.DataFrame()
+
+        return self._storage.merge_and_save(df, "crypto", "global", symbol.upper(), "daily")

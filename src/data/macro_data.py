@@ -119,7 +119,49 @@ class MacroDataAggregator:
         if self._cg and HAS_COINGECKO:
             result["crypto"] = self._get_crypto_summary()
 
+        # ---- Gold & Oil (from Parquet) ----
+        gold = self._get_latest_close("commodity", "global", "GC", "daily")
+        if gold is not None:
+            result["gold"] = gold
+
+        oil_wti = self._get_latest_close("commodity", "global", "CL", "daily")
+        if oil_wti is not None:
+            result["oil_wti"] = oil_wti
+
+        oil_brent = self._get_latest_close("commodity", "global", "BZ", "daily")
+        if oil_brent is not None:
+            result["oil_brent"] = oil_brent
+
+        # ---- Forex snapshot (from Parquet) ----
+        result["forex"] = {}
+        for pair in ["USDCNY", "EURCNY", "JPYCNY"]:
+            rate = self._get_latest_close("forex", "global", pair, "daily")
+            if rate is not None:
+                result["forex"][pair] = rate
+
+        # ---- Global index snapshot (from Parquet) ----
+        result["global_indices"] = {}
+        index_targets = [
+            ("us", "SPX"), ("us", "NDX"), ("hk", "HSI"),
+            ("jp", "N225"), ("de", "DAX"), ("uk", "FTSE"), ("fr", "CAC"),
+        ]
+        for mkt, sym in index_targets:
+            val = self._get_latest_close("index", mkt, sym, "daily")
+            if val is not None:
+                result["global_indices"][f"{mkt}_{sym}"] = val
+
         return result
+
+    def _get_latest_close(self, asset_type: str, market: str, symbol: str, data_type: str) -> Optional[float]:
+        """Read latest close price from Parquet storage."""
+        try:
+            storage = ParquetStorage()
+            df = storage.load(asset_type, market, symbol, data_type)
+            if df is not None and not df.empty and "close" in df.columns:
+                return float(df.iloc[-1]["close"])
+        except Exception:
+            pass
+        return None
 
     def _get_cpi_yoy_cn(self) -> Optional[float]:
         """Get China CPI YoY from AKShare."""

@@ -277,6 +277,12 @@ Click + Rich:
 Skill 只做编排（调 Python CLI），不含分析逻辑：
 - `/fetch-stock` — 数据抓取 (ohlcv + financials + reports，可组合)
 - `/analyze-stock` — 技术分析
+- `/fetch-index [MARKET] [CODE]` — 全球指数 (CN/US/HK/JP/UK/DE/FR)
+- `/fetch-flow` — 资金流向
+- `/fetch-commodity [CODE]` — 大宗商品
+- `/fetch-forex [PAIR]` — 外汇汇率
+- `/fetch-crypto [SYMBOL]` — 加密货币
+- `/fetch-yield-curve` — 美债收益率曲线
 - `/macro-check` — 宏观评估
 - `/valuation` — 估值分析 (10种方法)
 - `/full-report` — 综合多维分析
@@ -345,7 +351,7 @@ diskcache (SQLite缓存)
 
 ---
 
-## 开发进度 (2026-05-07)
+## 开发进度 (2026-05-08)
 
 ### 已完成
 
@@ -359,6 +365,7 @@ diskcache (SQLite缓存)
 | 4 | 集成层 (scorer/aggregator/report) + 跟踪 | ✓ |
 | — | CLI 命令: ohlcv, analyze-stock, financials, reports, macro-check, valuation, full-report, review | ✓ |
 | — | Skills: /fetch-stock, /analyze-stock, /macro-check, /valuation, /full-report, /review | ✓ |
+| — | 全球资产数据: commodity/forex/crypto/yield-curve CLI + Skills, index 统一为全球入口 | ✓ 2026-05-08 |
 
 ### 待完成
 
@@ -366,6 +373,11 @@ diskcache (SQLite缓存)
 - [x] `providers/fred.py` — 美国宏观数据 (FRED) — 2026-05-08
 - [x] `providers/coingecko.py` — 加密货币数据 — 2026-05-08
 - [x] DXY 美元指数 (yfinance) — 2026-05-08
+- [x] 大宗商品数据 (yfinance, 10种期货) — 2026-05-08
+- [x] 汇率数据 (yfinance, 9个汇率对) — 2026-05-08
+- [x] 全球指数 (HK/JP/UK/DE/FR) — 2026-05-08
+- [x] 加密货币 CLI/Skill 暴露 — 2026-05-08
+- [x] 美债完整收益率曲线 (3M→30Y) — 2026-05-08
 - [ ] `providers/news.py` — RSS 新闻抓取 + NLP 情绪
 
 **CLI + Skills (Phase 3 遗留):**

@@ -42,9 +42,12 @@ python -m src.cli.main financials <TICKER>         # 财务数据
 python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
 python -m src.cli.main analyze-stock <TICKER>      # 技术分析
 python -m src.cli.main macro-check                 # 宏观评估
-python -m src.cli.main index [CODE]               # 指数数据
-python -m src.cli.main flow                    # 资金流向
-python -m src.cli.main us-index [CODE]          # 美股指数
+python -m src.cli.main index [MARKET] [CODE]       # 全球指数 (cn/us/hk/jp/uk/de/fr)
+python -m src.cli.main commodity [CODE]            # 大宗商品 (黄金/原油/铜/天然气)
+python -m src.cli.main forex [PAIR]                # 外汇汇率
+python -m src.cli.main crypto [SYMBOL]             # 加密货币
+python -m src.cli.main yield-curve                 # 美债收益率曲线
+python -m src.cli.main flow                        # 资金流向
 python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
 python -m src.cli.main full-report <TICKER>        # 综合多维分析
 python -m src.cli.main review <TICKER>             # 回顾历史判断
@@ -54,8 +57,12 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 - `/fetch-stock <TICKER>` — 数据抓取 (日线/财报/年报，可组合)
 - `/analyze-stock <TICKER>` — 个股技术分析
-- `/fetch-index [cn|us] [CODE]` — 指数数据抓取 (CN+US)
+- `/fetch-index [MARKET] [CODE]` — 全球指数数据抓取 (CN/US/HK/JP/UK/DE/FR)
+- `/fetch-commodity [CODE]` — 大宗商品期货
+- `/fetch-forex [PAIR]` — 外汇汇率
+- `/fetch-crypto [SYMBOL]` — 加密货币
 - `/fetch-flow` — 资金流向数据
+- `/fetch-yield-curve` — 美债收益率曲线
 - `/macro-check` — 宏观环境评估
 - `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
@@ -66,7 +73,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 | 层 | 模块 | 状态 |
 |----|------|------|
 | 数据 | AKShare (A股日线/指数/宏观/三张表 via 同花顺) | 可用 |
-| 数据 | YFinance (全球股票/商品/外汇/指数) | 可用 (受速率限制) |
+| 数据 | YFinance (全球股票/商品/外汇/指数/加密货币) | 可用 (受速率限制) |
 | 数据 | CNINFO (年报PDF+MD) | 可用 |
 | 数据 | Parquet 存储 + 增量获取 | 可用 |
 | 分析 | 技术分析 | 可用 |
@@ -80,7 +87,8 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 - AKShare 被东方财富频繁限流，新 ticker 首次拉取可能失败
 - 详细三张表使用同花顺接口 (stock_financial_*_ths)，已替代不稳定的东方财富接口
-- CoinGecko/news provider 未实现
-- 美股/港股/商品/外汇/加密数据未接入
-- 商品/外汇/加密数据未接入
-- yfinance 有速率限制
+- RSS news provider 未实现（CoinGecko 已实现）
+- yfinance 批量拉取有限速，多品种间需加间隔
+- FRED 需要环境变量 `FRED_API_KEY`（免费申请）
+- 商品期货数据来自连续主力合约 (`GC=F`)，非现货价格
+- CNY 相关汇率对历史数据可能较短

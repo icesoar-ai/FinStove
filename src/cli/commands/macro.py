@@ -83,3 +83,32 @@ def macro_check(country: str):
                 chg = data.get("change_24h")
                 chg_str = f"{chg:+.1f}%" if chg else "N/A"
                 console.print(f"  {coin.upper()}: ${data['price']:,.0f} (24h {chg_str})")
+
+    # ---- Commodities ----
+    if macro_data.get("gold"):
+        console.print(f"  黄金 (COMEX): ${macro_data['gold']:,.1f}")
+    if macro_data.get("oil_wti") or macro_data.get("oil_brent"):
+        parts = []
+        if macro_data.get("oil_wti"):
+            parts.append(f"WTI ${macro_data['oil_wti']:,.1f}")
+        if macro_data.get("oil_brent"):
+            parts.append(f"Brent ${macro_data['oil_brent']:,.1f}")
+        console.print(f"  原油: {' | '.join(parts)}")
+
+    # ---- Forex snapshot ----
+    if macro_data.get("forex"):
+        forex_names = {"USDCNY": "美元/人民币", "EURCNY": "欧元/人民币", "JPYCNY": "日元/人民币"}
+        for pair, rate in macro_data["forex"].items():
+            label = forex_names.get(pair, pair)
+            console.print(f"  {label}: {rate:.4f}")
+
+    # ---- Global indices ----
+    if macro_data.get("global_indices"):
+        index_names = {
+            "us_SPX": "S&P 500", "us_NDX": "Nasdaq", "hk_HSI": "恒生指数",
+            "jp_N225": "日经225", "de_DAX": "DAX 40", "uk_FTSE": "FTSE 100", "fr_CAC": "CAC 40",
+        }
+        console.print("  全球指数:")
+        for key, val in macro_data["global_indices"].items():
+            label = index_names.get(key, key)
+            console.print(f"    {label}: {val:,.0f}")

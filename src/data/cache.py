@@ -32,6 +32,10 @@ class DataCache:
 
     def set(self, source: str, method: str, df: pd.DataFrame, *args, ttl: int = 3600, **kwargs) -> None:
         key = self._make_key(source, method, *args, **kwargs)
+        # 确保 index name 不与列名冲突（pandas to_json orient="table" 的限制）
+        df = df.copy()
+        if df.index.name is not None and df.index.name in df.columns:
+            df.index.name = None
         self._cache.set(key, (time.time(), ttl, df.to_json(orient="table", date_format="iso")))
 
     def invalidate(self, source: str = "", pattern: str = "") -> None:
