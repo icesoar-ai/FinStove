@@ -31,7 +31,7 @@ src/cli/            # CLI 入口 (Click)
 config/             # 配置文件 (主观策略层)
 data/               # 原始数据 (Parquet, PDF, MD) — gitignored
 .claude/skills/     # Claude Code Skills
-docs/               # 文档
+docs/               # 文档 (architecture.md, data-structure.md)
 ```
 
 ## CLI 命令

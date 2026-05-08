@@ -65,28 +65,7 @@
 
 Parquet 是真正的数据源（`src/data/storage.py`），SQLite 只是 API 去重缓存（`src/data/cache.py`）。
 
-**Parquet 存储路径规则：**
-
-```
-data/{asset_type}/{market}/{symbol}/{data_type}.parquet
-```
-
-| asset_type | market | symbol 示例 | data_type |
-|-----------|--------|-----------|-----------|
-| stock | cn | 600795_国电电力 | daily, balance_sheet, income, cashflow, financials |
-| stock | us | AAPL | daily, balance_sheet, income, cashflow |
-| stock | hk | 00700 | daily, balance_sheet, income, cashflow |
-| index | cn | 000001, 399001, 000300, 000016, 399006, 000688, 000905 | daily |
-| index | us | SPX, NDX, DJI, RUT, VIX | daily |
-| macro | cn | cpi, pmi, shibor | daily, monthly |
-| macro | us | cpi, core_cpi, fed_funds_rate, gdp, unemployment, treasury_10y, treasury_2y, treasury_1y, treasury_3m, consumer_sentiment | daily, monthly, quarterly |
-| flow | cn | northbound, southbound | daily (沪深港通资金流向) |
-| commodity | global | gold, oil | daily |
-| forex | global | dxy | daily |
-| crypto | global | btc | daily |
-
-- **symbol 格式**：`{code}_{name}`，如 `600795_国电电力`。股票名称从 `data/stock_names.json` 缓存获取，未命中时调用 AKShare API 查询并缓存。
-- **PDF/MD 报告**：`data/stock/cn/{code}_{name}/reports/{year} 年年度报告.md/.pdf`
+**Parquet 存储路径规则：** `data/{asset_type}/{market}/{symbol}/{data_type}.parquet`。完整目录结构和品种码表见 `docs/data-structure.md`。
 
 **数据获取流程：**
 
@@ -124,26 +103,7 @@ data/{asset_type}/{market}/{symbol}/{data_type}.parquet
 
 SQLite 丢了不影响数据完整性，只会多一两次 API 请求。
 
-```
-data/                          # Parquet 原始数据
-├── stock/
-│   ├── cn/600519/
-│   │   ├── daily.parquet      # 日线 OHLCV
-│   │   ├── financials.parquet # 财报（资产负债表/利润/现金流）
-│   │   └── info.json          # 公司概况
-│   ├── us/AAPL/
-│   └── hk/00700/
-├── index/cn/000001/daily.parquet
-├── macro/cn/{cpi,pmi,shibor}/
-│   └── daily.parquet
-├── flow/cn/{northbound,southbound}.parquet
-├── commodity/{gold,oil}.parquet
-├── forex/dxy.parquet
-└── crypto/btc.parquet
-
-~/.cache/stocks/cache.db       # SQLite API 请求缓存 (diskcache)
-~/.cache/stocks/tracking/      # 判断跟踪记录 (JSON)
-```
+详见 `docs/data-structure.md` — 完整的目录树、命名规则、品种码表和数据来源。
 
 ### Analysis Layer (`src/analysis/`)
 每个模块继承 AbstractAnalyzer，输入 AnalysisContext，输出 AnalysisResult (score: -2~+2, confidence, signals, summary):
