@@ -125,9 +125,13 @@ def _normalize_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 @click.command()
 @click.argument("ticker")
-@click.option("--format", default="standard", help="Report format: brief, standard, full")
+@click.option("--format", default="standard", help="报告格式: brief (简要) / standard (标准) / full (完整)")
 def valuation(ticker: str, format: str):
-    """Multi-method valuation from stored data (10 methods)."""
+    """基本面估值分析 — 10 种方法综合估值.
+
+    FCFF / FCFE / DDM / Graham / EPV / NCAV / 剩余收益 / 倍数法 / FCF质量 / 财务健康。
+    需先拉取数据: /fetch-stock <TICKER> financials
+    """
     symbol, market = parse_ticker(ticker)
 
     if market != Market.CN:

@@ -82,6 +82,9 @@ data/
 # 盘中分钟K线（通过 intraday 命令或 ohlcv --intraday flag 生成，datetime 去重）
 # data/stock/{market}/{CODE}/intraday_{interval}.parquet
 # 例: data/stock/cn/600388_龙净环保/intraday_5m.parquet
+
+# 新闻数据（通过 NewsProvider 抓取）
+# data/news/{market}/{CODE}/news.parquet
 ```
 
 ## 命名规则

@@ -10,9 +10,12 @@ console = Console()
 
 @click.command()
 @click.argument("ticker")
-@click.option("--years", default="", help="Comma-separated years, e.g. 2021,2022,2023 (default: all available)")
+@click.option("--years", default="", help="过滤年份，逗号分隔 (如 2021,2022,2023)，默认下载全部可用年报")
 def reports(ticker: str, years: str):
-    """Download annual reports (PDF + Markdown) from CNINFO."""
+    """A股年报下载 — PDF 原文 + Markdown 转换文本.
+
+    数据源: CNINFO (巨潮资讯网)，PDF 自动转 MD 方便文本分析。
+    """
     symbol, market = parse_ticker(ticker)
     if market.value != "cn":
         console.print("[red]年报下载仅支持A股[/red]")

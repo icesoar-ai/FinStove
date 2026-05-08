@@ -16,7 +16,10 @@ console = Console()
 @click.command()
 @click.argument("ticker")
 def review(ticker: str):
-    """Review historical predictions for a ticker."""
+    """回顾历史判断 — 对比历史分析记录与实际走势，计算胜率与偏差度.
+
+    每次 /full-report 自动保存判断记录，积累数据后回测更可靠。
+    """
     symbol, market = parse_ticker(ticker)
     records = load_records(symbol)
 

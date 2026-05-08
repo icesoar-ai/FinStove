@@ -11,9 +11,12 @@ console = Console()
 
 @click.command()
 @click.argument("ticker")
-@click.option("--years", default="", help="Comma-separated years to show (e.g. 2021,2022)")
+@click.option("--years", default="", help="过滤年份，逗号分隔 (如 2021,2022,2023)")
 def financials(ticker: str, years: str):
-    """Fetch financial statements for a stock."""
+    """A股三大财务报表 — 资产负债表 / 利润表 / 现金流量表 / 主要财务指标.
+
+    数据源: AKShare (同花顺)，需先拉取数据: /fetch-stock <TICKER> financials
+    """
     symbol, market = parse_ticker(ticker)
     if market.value != "cn":
         console.print("[red]财报下载仅支持A股[/red]")

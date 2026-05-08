@@ -158,8 +158,12 @@ def _change_str(cur, prev) -> tuple[str, str]:
 
 
 @click.command("summary")
-def daily_summary():
-    """Daily data update summary — latest values from all Parquet datasets."""
+@click.option("--alert", is_flag=True, default=False, help="只显示涨跌幅超过 2% 的品种")
+def daily_summary(alert: bool):
+    """每日数据更新汇总 — 全品种最新价/涨跌幅/数据新鲜度.
+
+    只读不抓取，涵盖指数/商品/外汇/加密货币/美债。
+    """
     storage = ParquetStorage()
     groups = [
         ("全球指数", INDEX_SETS, {"is_forex": False, "is_pct": False, "is_flow": False}),

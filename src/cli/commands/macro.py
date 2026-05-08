@@ -14,9 +14,12 @@ console = Console()
 
 
 @click.command()
-@click.option("--country", default="cn,us", help="Countries to check (comma-separated)")
+@click.option("--country", default="cn,us", help="评估市场: cn,us (逗号分隔)")
 def macro_check(country: str):
-    """Macro environment assessment."""
+    """宏观环境评估 — 利率/通胀/GDP/PMI/收益率曲线/汇率/商品.
+
+    整合 CN (AKShare) + US (FRED) 宏观数据，产出综合宏观评分。
+    """
     countries = [c.strip().upper() for c in country.split(",")]
     console.print(f"[bold blue]Macro Check: {', '.join(countries)}[/bold blue]")
 

@@ -16,11 +16,14 @@ console = Console()
 
 @click.command()
 @click.argument("ticker")
-@click.option("--start", default="2020-01-01", help="Start date")
-@click.option("--end", default="", help="End date")
-@click.option("--market", default="auto", help="Market (auto/cn/us/hk/jp/uk/de/fr)")
+@click.option("--start", default="2020-01-01", help="分析起始日期")
+@click.option("--end", default="", help="分析截止日期 (默认: 今日)")
+@click.option("--market", default="auto", help="市场 (auto 自动识别 / cn / us / hk / jp / uk / de / fr)")
 def analyze_stock(ticker: str, start: str, end: str, market: str):
-    """Deep single-stock analysis."""
+    """个股技术分析 — 趋势/动量/成交量/支撑阻力/形态识别.
+
+    基于日线 OHLCV 数据，产出多维技术信号和综合评分 (-2 ~ +2)。
+    """
     from datetime import date
 
     end = end or date.today().strftime("%Y-%m-%d")

@@ -41,6 +41,8 @@ python -m src.cli.main spot                        # 实时行情概览
 python -m src.cli.main spot -m cn [hk] [us]       # 涨跌榜
 python -m src.cli.main spot <TICKER>               # 个股实时行情
 python -m src.cli.main intraday <TICKER> [-i 5m]   # 盘中分钟K线
+python -m src.cli.main sentiment <TICKER> [-d DAYS] # 新闻情绪分析
+python -m src.cli.main report-analyze <TICKER>      # 年报文本分析
 python -m src.cli.main ohlcv <TICKER> [--intraday] # 拉取日线 OHLCV
 python -m src.cli.main financials <TICKER>         # 财务数据
 python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
@@ -74,6 +76,8 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - `/spot` — 实时行情查询（全球指数/外汇/商品/加密货币/A股/港股/美股）
 - `/spot` — 实时行情（全球指数/外汇/商品/加密货币/个股）
 - `/intraday <TICKER>` — 盘中分钟K线（自动切换AKShare/yfinance）
+- `/sentiment <TICKER>` — 新闻情绪分析（jieba分词+情感词典）
+- `/report-analyze <TICKER>` — 年报文本分析（审计意见/风险/展望）
 - `/review <TICKER>` — 回顾历史判断
 
 ## 已实现模块
@@ -85,7 +89,10 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 | 数据 | CNINFO (年报PDF+MD) | 可用 |
 | 数据 | 实时行情 (YFinance 概览 + AKShare 个股) | 可用 |
 | 数据 | 盘中分钟K线 (AKShare → yfinance 自动降级) | 可用 |
+| 数据 | 新闻抓取 (AKShare 东方财富 + CCTV) | 可用 |
 | 数据 | Parquet 存储 + 增量获取 | 可用 |
+| 分析 | 新闻 NLP 情绪 (jieba + 金融情感词典) | 可用 |
+| 分析 | 年报文本分析 (审计意见/指标提取/风险/展望) | 可用 |
 | 分析 | 技术分析 | 可用 |
 | 分析 | 宏观分析 | 可用 (中国数据) |
 | 分析 | 基本面估值 (10方法) | 可用 |

@@ -22,6 +22,8 @@ from src.cli.commands.flow import flow_data
 from src.cli.commands.commodity import commodity_data
 from src.cli.commands.forex import forex_data
 from src.cli.commands.intraday import intraday
+from src.cli.commands.report_analyze import report_analyze
+from src.cli.commands.sentiment import sentiment
 from src.cli.commands.crypto import crypto_data
 from src.cli.commands.yield_curve import yield_curve_data
 from src.cli.commands.spot import spot
@@ -47,6 +49,8 @@ cli.add_command(flow_data)
 cli.add_command(commodity_data)
 cli.add_command(forex_data)
 cli.add_command(intraday)
+cli.add_command(report_analyze)
+cli.add_command(sentiment)
 cli.add_command(crypto_data)
 cli.add_command(yield_curve_data)
 cli.add_command(spot)

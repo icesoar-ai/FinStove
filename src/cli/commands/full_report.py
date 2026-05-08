@@ -31,8 +31,13 @@ console = Console()
 @click.argument("ticker")
 @click.option("--context", default="long_term", help="Analysis context: long_term, short_term")
 @click.option("--format", default="standard", help="Report format: brief, standard, full")
+@click.option("--context", default="long_term", help="分析场景: long_term (长期投资) / short_term (短期交易)")
+@click.option("--format", default="standard", help="报告格式: brief (简要) / standard (标准) / full (完整)")
 def full_report(ticker: str, context: str, format: str):
-    """Comprehensive multi-dimension analysis report."""
+    """综合多维分析报告 — 10 维度加权评分 + 目标价 + 风险 + 情景.
+
+    整合技术面/宏观/情绪/资金流/政策/估值/风险/基准/情景/年报文本分析。
+    """
     symbol, market = parse_ticker(ticker)
     cache = DataCache()
     registry = ProviderRegistry(cache)
@@ -74,8 +79,19 @@ def full_report(ticker: str, context: str, format: str):
     except Exception:
         pass
 
+    # Fetch news for sentiment analysis
+    news_data = []
+    try:
+        from src.data.providers.news import NewsProvider
+        np_ = NewsProvider(cache=cache)
+        news_data = np_.get_all_news(symbol, days=7)
+        console.print(f"[dim]{len(news_data)} news items loaded[/dim]")
+    except Exception:
+        pass
+
     tk = TickerModel(raw=ticker, market=market, symbol=symbol)
-    ctx = AnalysisContext(ticker=tk, price_data=df, macro_data=macro_data, financials=financials)
+    ctx = AnalysisContext(ticker=tk, price_data=df, macro_data=macro_data,
+                          financials=financials, news_data=news_data)
 
     # Run all analyzers
     analyzers = [
@@ -92,6 +108,16 @@ def full_report(ticker: str, context: str, format: str):
                 results.append(result)
         except Exception as e:
             console.print(f"[yellow]{analyzer.dimension.value} error: {e}[/yellow]")
+
+    # Run report text analysis for CN stocks
+    if market == Market.CN:
+        try:
+            from src.analysis.report_text import ReportTextAnalyzer
+            rt_result = ReportTextAnalyzer().analyze(ctx)
+            if rt_result.signals:
+                results.append(rt_result)
+        except Exception:
+            pass
 
     if not results:
         console.print("[red]No analysis could be completed.[/red]")

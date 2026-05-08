@@ -11,10 +11,13 @@ console = Console()
 
 
 @click.command("flow")
-@click.option("--start", default="2010-01-01", help="Start date")
-@click.option("--end", default="", help="End date (default: today)")
+@click.option("--start", default="2010-01-01", help="起始日期")
+@click.option("--end", default="", help="截止日期 (默认: 今日)")
 def flow_data(start: str, end: str):
-    """Fetch northbound/southbound capital flow data (沪深港通资金流向)."""
+    """沪深港通资金流向 — 北向资金 (外资流入A股) / 南向资金 (内资流入港股).
+
+    数据源: AKShare (东方财富)，持久化到 data/flow/cn/
+    """
     from src.data.providers.akshare import AKShareProvider
 
     end = end or date.today().strftime("%Y-%m-%d")

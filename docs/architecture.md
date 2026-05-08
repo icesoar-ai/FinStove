@@ -223,6 +223,8 @@ src/track/
 Click + Rich:
 - `stocks-cli spot [TICKER]` — 实时行情查询（概览/涨跌榜/个股/自选）
 - `stocks-cli intraday <TICKER>` — 盘中分钟K线（自动切换AKShare/yfinance）
+- `stocks-cli sentiment <TICKER>` — 新闻情绪分析
+- `stocks-cli report-analyze <TICKER>` — 年报文本分析
 - `stocks-cli market-scan` — 多市场概览
 - `stocks-cli analyze-stock <TICKER>` — 个股深度
 - `stocks-cli macro-check` — 宏观环境
@@ -250,6 +252,8 @@ Skill 只做编排（调 Python CLI），不含分析逻辑：
 - `/full-report` — 综合多维分析
 - `/spot` — 实时行情（全球指数/外汇/商品/加密货币/个股）
 - `/intraday` — 盘中分钟K线（自动切换AKShare/yfinance）
+- `/sentiment` — 新闻情绪分析
+- `/report-analyze` — 年报文本分析
 - `/review` — 回顾历史判断
 
 ## 关键依赖
@@ -332,6 +336,8 @@ diskcache (SQLite缓存)
 | — | 全球资产数据: commodity/forex/crypto/yield-curve CLI + Skills, index 统一为全球入口 | ✓ 2026-05-08 |
 | — | 实时行情: /spot 命令 (概览/涨跌榜/个股/自选) + fetch --spot flag | ✓ 2026-05-08 |
 | — | 盘中数据: /intraday 命令 + ohlcv --intraday flag (AKShare→yfinance 自动降级) | ✓ 2026-05-09 |
+| — | 新闻情绪: /sentiment 命令 + NewsProvider + jieba NLP 情感引擎 | ✓ 2026-05-09 |
+| — | 年报分析: /report-analyze 命令 + ReportTextAnalyzer | ✓ 2026-05-09 |
 
 ### 待完成
 
