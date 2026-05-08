@@ -55,6 +55,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 ## Skills
 
+- `/fetch-all` — 一键拉取全部每日数据（指数/商品/汇率/加密货币/美债）
 - `/fetch-stock <TICKER>` — 数据抓取 (日线/财报/年报，可组合)
 - `/analyze-stock <TICKER>` — 个股技术分析
 - `/fetch-index [MARKET] [CODE]` — 全球指数数据抓取 (CN/US/HK/JP/UK/DE/FR)
