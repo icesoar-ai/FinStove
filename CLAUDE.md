@@ -54,9 +54,8 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 - `/fetch-stock <TICKER>` — 数据抓取 (日线/财报/年报，可组合)
 - `/analyze-stock <TICKER>` — 个股技术分析
-- `/fetch-index [CODE]` — 指数数据抓取
+- `/fetch-index [cn|us] [CODE]` — 指数数据抓取 (CN+US)
 - `/fetch-flow` — 资金流向数据
-- `/fetch-us-index [CODE]` — 美股指数数据
 - `/macro-check` — 宏观环境评估
 - `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
