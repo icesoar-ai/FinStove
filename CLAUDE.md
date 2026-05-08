@@ -47,6 +47,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 - `/fetch-stock <TICKER>` — 数据抓取 (日线/财报/年报，可组合)
 - `/analyze-stock <TICKER>` — 个股技术分析
+- `/fetch-index [CODE]` — 指数数据抓取
 - `/macro-check` — 宏观环境评估
 - `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
@@ -56,7 +57,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 | 层 | 模块 | 状态 |
 |----|------|------|
-| 数据 | AKShare (A股日线/宏观/三张表 via 同花顺) | 可用 |
+| 数据 | AKShare (A股日线/指数/宏观/三张表 via 同花顺) | 可用 |
 | 数据 | YFinance (全球股票/商品/外汇) | 可用 (受速率限制) |
 | 数据 | CNINFO (年报PDF+MD) | 可用 |
 | 数据 | Parquet 存储 + 增量获取 | 可用 |

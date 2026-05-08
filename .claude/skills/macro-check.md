@@ -22,5 +22,5 @@ python -m src.cli.main macro-check
 
 ## 注意事项
 
-- 目前主要覆盖中国数据（CPI/PMI/Shibor），美国宏观需等 FRED provider 完成后支持
+- 覆盖中美两国数据（CN: CPI/PMI/Shibor, US: CPI/GDP/利率/收益率曲线/失业率/消费者信心）
 - 宏观评分仅基于可获得的数据，置信度低时需提醒用户数据不全
