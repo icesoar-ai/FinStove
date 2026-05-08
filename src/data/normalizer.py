@@ -109,6 +109,29 @@ def normalize_financials(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Rename columns to standard English names based on COLUMN_MAP."""
+    df = df.copy()
+    rename = {}
+    for std_name, aliases in COLUMN_MAP.items():
+        for alias in aliases:
+            if alias in df.columns and alias != std_name:
+                rename[alias] = std_name
+                break
+    if rename:
+        df = df.rename(columns=rename)
+    return df
+
+
+def normalize_dates(df: pd.DataFrame, date_col: str = "date") -> pd.DataFrame:
+    """Ensure date column is datetime and sorted ascending."""
+    df = df.copy()
+    if date_col in df.columns:
+        df[date_col] = pd.to_datetime(df[date_col]).dt.date
+        df = df.sort_values(date_col).reset_index(drop=True)
+    return df
+
+
 def standardize(df: pd.DataFrame) -> pd.DataFrame:
     """Full normalization pipeline."""
     return normalize_dates(normalize_columns(df))

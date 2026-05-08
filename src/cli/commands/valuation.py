@@ -215,6 +215,7 @@ def valuation(ticker: str, format: str):
         console.print("[dim]无日线数据，相对估值缺少当前价格参考[/dim]")
 
     # Run all valuation methods
+    financials["market"] = market
     agg = ValuationAggregator()
     results = agg.evaluate_all(financials, market_data if not market_data.empty else None)
     summary_result = agg.aggregate(results)

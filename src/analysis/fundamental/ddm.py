@@ -1,6 +1,23 @@
 from .base import ValuationMethod, ValuationResult
 
 
+# AKShare CN dividend data uses "元/10股" (per 10 shares).
+# Most other markets (HK, US, JP, UK, DE, FR) report per-share directly.
+# We infer the convention from the Market enum passed in financials dict.
+CN_DIVIDEND_UNIT = 10  # CN: dividend column is 元/10股
+GLOBAL_DIVIDEND_UNIT = 1  # Global: per-share directly
+
+
+def _dividend_unit(market) -> int:
+    """Return the divisor to convert raw dividend column to per-share DPS."""
+    if market is None:
+        return CN_DIVIDEND_UNIT  # default to CN (backward compat)
+    m = market.value if hasattr(market, "value") else market
+    if str(m).lower() == "cn":
+        return CN_DIVIDEND_UNIT
+    return GLOBAL_DIVIDEND_UNIT
+
+
 class DDMValuation(ValuationMethod):
     """Dividend Discount Model — Gordon Growth + Multi-stage DDM."""
 
@@ -11,12 +28,13 @@ class DDMValuation(ValuationMethod):
         bs = financials.get("balance_sheet", None)
         cf = financials.get("cashflow", None)
         dividends = financials.get("dividends", None)
+        market = financials.get("market", None)
 
         if inc is None or inc.empty:
             return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, reason="数据缺失", warnings=["无利润表数据"])
 
         try:
-            dps = self._extract_dps(inc, cf, dividends)
+            dps = self._extract_dps(inc, cf, dividends, market)
             if dps is None:
                 return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0.1, reason="数据缺失", warnings=["缺少股利数据，无法使用 DDM"])
             if dps <= 0:
@@ -44,13 +62,16 @@ class DDMValuation(ValuationMethod):
         except Exception as e:
             return ValuationResult(method=self.name, fair_value=0, value_low=0, value_high=0, confidence=0, warnings=[f"DDM计算异常: {e}"])
 
-    def _extract_dps(self, inc, cf, dividends=None) -> float | None:
+    def _extract_dps(self, inc, cf, dividends=None, market=None) -> float | None:
         # 1. Use dedicated dividend history if available
         if dividends is not None and not dividends.empty and "派息" in dividends.columns:
-            # Sum dividends per year, then average annual DPS over recent years
+            # Sum dividends per year, then average annual DPS over recent years.
+            # AKShare CN dividend "派息" column is in 元/10股, divide by 10.
+            # Other markets report per-share directly.
+            unit = _dividend_unit(market)
             div = dividends.copy()
             div["年份"] = div["公告日期"].dt.year
-            annual = div.groupby("年份")["派息"].sum()
+            annual = div.groupby("年份")["派息"].sum() / unit
             if len(annual) >= 3:
                 recent_years = annual.tail(3)
                 return float(recent_years.mean())

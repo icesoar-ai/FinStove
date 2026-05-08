@@ -392,6 +392,8 @@ diskcache (SQLite缓存)
 - [x] 分红数据抓取 (ak.stock_history_dividend_detail, 2026-05-07) — 存储为 dividends.parquet，DDM 优先使用
 - [x] DDM 参数修复 (2026-05-07) — 年度化 DPS、分红 CAGR 替代净利润增长、3% 最小利差防 Gordon 爆炸
 - [x] 股本数据修补 (2026-05-07) — BS 股本为 0 时从摘要 净利润/EPS 反推
+- [x] DDM 分红单位自适应 (2026-05-08) — A 股"元/10 股"、港股/美股"元/股"，根据 Market enum 自动转换
+- [x] normalizer.py 函数补全 (2026-05-08) — 修复 normalize_dates/normalize_columns 缺失导致技术分析报错
 - [ ] A股幸存者偏差处理 (退市公司历史)
 - [ ] 前视偏差检测 (财报发布日期 vs 截止日)
 - [ ] 复权数据校验
