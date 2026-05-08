@@ -157,14 +157,70 @@ class AKShareProvider:
 
     # ---- Northbound / Southbound Flow ----
     def get_northbound(self, start: str = "20100101", end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch northbound net flow (沪深港通北向资金), with Parquet persistence."""
         if end is None:
             end = date.today().strftime("%Y%m%d")
-        return self._cached("northbound", 86400, self._ak.stock_hsgt_north_net_flow_in_em, start, end)
+
+        key = ("flow", "cn", "northbound", "daily")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            _, last = self._storage.get_date_range(*key)
+            if last and last >= date.today() - timedelta(days=1):
+                return existing
+            start = (last + timedelta(days=1)).strftime("%Y%m%d")
+            if start >= end:
+                return existing
+
+        df = self._cached("northbound", 86400,
+                          self._ak.stock_hsgt_hist_em, "北向资金")
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
 
     def get_southbound(self, start: str = "20100101", end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch southbound net flow (沪深港通南向资金), with Parquet persistence."""
         if end is None:
             end = date.today().strftime("%Y%m%d")
-        return self._cached("southbound", 86400, self._ak.stock_hsgt_south_net_flow_in_em, start, end)
+
+        key = ("flow", "cn", "southbound", "daily")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            _, last = self._storage.get_date_range(*key)
+            if last and last >= date.today() - timedelta(days=1):
+                return existing
+            start = (last + timedelta(days=1)).strftime("%Y%m%d")
+            if start >= end:
+                return existing
+
+        df = self._cached("southbound", 86400,
+                          self._ak.stock_hsgt_hist_em, "南向资金")
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_northbound_latest(self) -> Optional[float]:
+        """Get most recent northbound net flow value in 亿元."""
+        df = self.get_northbound()
+        if df.empty:
+            return None
+        col = "当日成交净买额"
+        if col in df.columns:
+            val = df.iloc[-1][col]
+            if pd.notna(val):
+                return float(val)
+        return None
+
+    def get_southbound_latest(self) -> Optional[float]:
+        """Get most recent southbound net flow value in 亿元."""
+        df = self.get_southbound()
+        if df.empty:
+            return None
+        col = "当日成交净买额"
+        if col in df.columns:
+            val = df.iloc[-1][col]
+            if pd.notna(val):
+                return float(val)
+        return None
 
     # ---- Macro (with Parquet) ----
 

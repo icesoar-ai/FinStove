@@ -18,6 +18,7 @@ from src.cli.commands.reports import reports
 from src.cli.commands.full_report import full_report
 from src.cli.commands.review import review
 from src.cli.commands.index_data import index_data
+from src.cli.commands.flow import flow_data
 
 
 @click.group()
@@ -35,6 +36,7 @@ cli.add_command(reports)
 cli.add_command(full_report)
 cli.add_command(review)
 cli.add_command(index_data)
+cli.add_command(flow_data)
 
 
 if __name__ == "__main__":

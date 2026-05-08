@@ -14,6 +14,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Python 3.12+, Click + Rich (CLI), AKShare + yfinance + CNINFO (数据), ta (技术指标), MarkItDown (PDF转换), pandas/numpy/pyarrow
 
+## Git提交要求
+
+在 Git 提交前，检查这次修改是否需要更新文档、Skills等。同步更新提交。
+
 ## 项目结构
 
 ```
@@ -38,6 +42,7 @@ python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
 python -m src.cli.main analyze-stock <TICKER>      # 技术分析
 python -m src.cli.main macro-check                 # 宏观评估
 python -m src.cli.main index [CODE]               # 指数数据
+python -m src.cli.main flow                    # 资金流向
 python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
 python -m src.cli.main full-report <TICKER>        # 综合多维分析
 python -m src.cli.main review <TICKER>             # 回顾历史判断
@@ -48,6 +53,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - `/fetch-stock <TICKER>` — 数据抓取 (日线/财报/年报，可组合)
 - `/analyze-stock <TICKER>` — 个股技术分析
 - `/fetch-index [CODE]` — 指数数据抓取
+- `/fetch-flow` — 资金流向数据
 - `/macro-check` — 宏观环境评估
 - `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
@@ -74,5 +80,5 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - 详细三张表使用同花顺接口 (stock_financial_*_ths)，已替代不稳定的东方财富接口
 - CoinGecko/news provider 未实现
 - 美股/港股/商品/外汇/加密数据未接入
-- 宏观/资金流向数据部分未缓存（CN+US 宏观已缓存，CN 指数已缓存）
+- 商品/外汇/加密数据未接入
 - yfinance 有速率限制

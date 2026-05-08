@@ -79,7 +79,7 @@ data/{asset_type}/{market}/{symbol}/{data_type}.parquet
 | index | cn | 000001, 399001, 000300, 000016, 399006, 000688, 000905 | daily |
 | macro | cn | cpi, pmi, shibor | daily, monthly |
 | macro | us | cpi, core_cpi, fed_funds_rate, gdp, unemployment, treasury_10y, treasury_2y, treasury_1y, treasury_3m, consumer_sentiment | daily, monthly, quarterly |
-| flow | cn | northbound, southbound | daily |
+| flow | cn | northbound, southbound | daily (沪深港通资金流向) |
 | commodity | global | gold, oil | daily |
 | forex | global | dxy | daily |
 | crypto | global | btc | daily |
