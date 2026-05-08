@@ -70,7 +70,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 - AKShare 被东方财富频繁限流，新 ticker 首次拉取可能失败
 - 详细三张表使用同花顺接口 (stock_financial_*_ths)，已替代不稳定的东方财富接口
-- FRED/CoinGecko/news provider 未实现
+- CoinGecko/news provider 未实现
 - 美股/港股/商品/外汇/加密数据未接入
-- 宏观/指数/资金流向数据未缓存
+- 宏观/指数/资金流向数据部分未缓存（CN 宏观已缓存，US 宏观已缓存到 Parquet）
 - yfinance 有速率限制
