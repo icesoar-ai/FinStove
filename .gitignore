@@ -23,5 +23,8 @@ venv/
 # Data (regeneratable via providers)
 /data/
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # Cache
 ~/.cache/stocks/
