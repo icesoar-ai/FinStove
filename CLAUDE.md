@@ -14,9 +14,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Python 3.12+, Click + Rich (CLI), AKShare + yfinance + CNINFO (数据), ta (技术指标), MarkItDown (PDF转换), pandas/numpy/pyarrow
 
-## Git提交要求
+## 技术要求
 
-在 Git 提交前，检查这次修改是否需要更新文档、Skills等。同步更新提交。
+1. 在 Git 提交前，检查这次修改是否需要更新文档、Skills等。同步更新提交。
+2. 抓取数据要支持持久化，存到数据目录下。
 
 ## 项目结构
 
@@ -43,6 +44,7 @@ python -m src.cli.main analyze-stock <TICKER>      # 技术分析
 python -m src.cli.main macro-check                 # 宏观评估
 python -m src.cli.main index [CODE]               # 指数数据
 python -m src.cli.main flow                    # 资金流向
+python -m src.cli.main us-index [CODE]          # 美股指数
 python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
 python -m src.cli.main full-report <TICKER>        # 综合多维分析
 python -m src.cli.main review <TICKER>             # 回顾历史判断
@@ -54,6 +56,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - `/analyze-stock <TICKER>` — 个股技术分析
 - `/fetch-index [CODE]` — 指数数据抓取
 - `/fetch-flow` — 资金流向数据
+- `/fetch-us-index [CODE]` — 美股指数数据
 - `/macro-check` — 宏观环境评估
 - `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
@@ -64,7 +67,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 | 层 | 模块 | 状态 |
 |----|------|------|
 | 数据 | AKShare (A股日线/指数/宏观/三张表 via 同花顺) | 可用 |
-| 数据 | YFinance (全球股票/商品/外汇) | 可用 (受速率限制) |
+| 数据 | YFinance (全球股票/商品/外汇/指数) | 可用 (受速率限制) |
 | 数据 | CNINFO (年报PDF+MD) | 可用 |
 | 数据 | Parquet 存储 + 增量获取 | 可用 |
 | 分析 | 技术分析 | 可用 |

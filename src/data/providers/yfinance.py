@@ -18,12 +18,23 @@ SUFFIX_MAP = {
 }
 
 INDEX_TICKERS = {
-    "us": {"SPX": "^GSPC", "NDX": "^IXIC", "DJI": "^DJI"},
+    "us": {
+        "SPX": "^GSPC", "NDX": "^IXIC", "DJI": "^DJI",
+        "RUT": "^RUT", "VIX": "^VIX",
+    },
     "hk": {"HSI": "^HSI"},
     "jp": {"N225": "^N225"},
     "uk": {"FTSE": "^FTSE"},
     "de": {"DAX": "^GDAXI"},
     "fr": {"CAC": "^FCHI"},
+}
+
+US_INDEX_NAMES = {
+    "SPX": "S&P 500",
+    "NDX": "Nasdaq Composite",
+    "DJI": "Dow Jones Industrial",
+    "RUT": "Russell 2000",
+    "VIX": "CBOE Volatility Index",
 }
 
 
@@ -132,6 +143,34 @@ class YFinanceProvider:
     def get_index(self, symbol: str, market: str = "us", start: str = "2010-01-01",
                   end: Optional[str] = None) -> pd.DataFrame:
         return self.get_generic(self._build_symbol(symbol, market, "index"), start, end)
+
+    def get_index_daily(self, symbol: str, market: str = "us", start: str = "2010-01-01",
+                        end: Optional[str] = None) -> pd.DataFrame:
+        """Fetch index daily OHLCV with Parquet persistence.
+
+        Storage path: data/index/{market}/{symbol}/daily.parquet
+        """
+        if end is None:
+            end = date.today().strftime("%Y-%m-%d")
+
+        existing = self._storage.load("index", market, symbol, "daily")
+        if not existing.empty:
+            _, last_date = self._storage.get_date_range("index", market, symbol, "daily")
+            if last_date and last_date >= date.today() - timedelta(days=1):
+                return existing
+            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
+            if start >= end:
+                return existing
+
+        yf_symbol = self._build_symbol(symbol, market, "index")
+        ticker = self._yf.Ticker(yf_symbol)
+        df = ticker.history(start=start, end=end)
+        df = self._normalize_df(df)
+
+        if df is None or df.empty:
+            return existing if not existing.empty else pd.DataFrame()
+
+        return self._storage.merge_and_save(df, "index", market, symbol, "daily")
 
     # ---- DXY (US Dollar Index) ----
 
