@@ -21,15 +21,15 @@ trigger: /spot
 
 ## 数据源
 
-| 品种 | 数据源 | 说明 |
-|------|--------|------|
-| A股 | AKShare (东方财富) | 全部A股实时行情 |
-| 港股 | AKShare (东方财富) | 港股实时行情 |
-| 美股 | AKShare (东方财富) | 美股行情 (延迟15分钟) |
-| 全球指数 | AKShare (东方财富) | 包含CN/US/HK/JP/UK/DE/FR |
-| 外汇 | AKShare (东方财富) | 全部汇率实时行情 |
-| 商品期货 | AKShare (东方财富) | 国际期货行情 |
-| 加密货币 | CoinGecko | BTC/ETH实时报价 |
+| 品种 | 概览/加密货币 | 涨跌榜/个股 |
+|------|-------------|-----------|
+| 全球指数 | **YFinance** | — |
+| 外汇 | **YFinance** | — |
+| 商品期货 | **YFinance** | — |
+| 加密货币 | **YFinance** | — |
+| A股 | — | AKShare (东方财富) |
+| 港股 | — | AKShare (东方财富) |
+| 美股 | — | AKShare + YFinance |
 
 ## 唤醒后执行
 
@@ -40,6 +40,6 @@ python -m src.cli.main spot [TICKER] [-m MARKET] [-w WATCHLIST] [-n LIMIT]
 ## 注意事项
 
 - 纯实时查询，不写入 Parquet 存储
-- AKShare 的东方财富接口有频率限制，避免短时间内大量调用
-- 美股数据延迟约15分钟（东方财富源）
-- 加密货币优先使用 CoinGecko（需网络），备选 AKShare
+- 概览全部走 YFinance，不受东方财富限流影响
+- 涨跌榜/个股行情走 AKShare（东方财富），有频率限制，避免短时间内大量调用
+- 美股个股优先用 YFinance fast_info，备选 AKShare

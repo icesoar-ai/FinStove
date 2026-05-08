@@ -57,8 +57,9 @@ def _safe_float(s) -> float | None:
 
 # ==== Mode: global overview ====
 
-def _overview(ak: AKShareProvider, cg: CoinGeckoProvider):
+def _overview():
     console.print(Panel.fit("实时行情概览", style="bold cyan"))
+    import yfinance as yf
 
     # --- Indices table ---
     idx_table = Table(title="全球指数", border_style="blue")
@@ -66,17 +67,24 @@ def _overview(ak: AKShareProvider, cg: CoinGeckoProvider):
     idx_table.add_column("最新价", justify="right")
     idx_table.add_column("涨跌幅", justify="right")
 
-    cn_keys = {"上证指数", "深证成指", "沪深300", "创业板指", "科创50", "中证500"}
-    global_keys = {"道琼斯", "纳斯达克", "标普500", "恒生指数", "日经225", "英国富时100", "德国DAX30", "法国CAC40"}
-
+    _IDX_TICKERS = {
+        "000001.SS": "上证指数", "399001.SZ": "深证成指", "000300.SS": "沪深300",
+        "399006.SZ": "创业板指", "000688.SS": "科创50",
+        "^GSPC": "标普500", "^IXIC": "纳斯达克", "^DJI": "道琼斯",
+        "^HSI": "恒生指数", "^N225": "日经225",
+        "^FTSE": "英国富时100", "^GDAXI": "德国DAX", "^FCHI": "法国CAC",
+    }
     try:
-        idx_df = ak.get_index_spot()
-        for _, r in idx_df.iterrows():
-            name = str(r.get("名称", ""))
-            if name in cn_keys or name in global_keys:
-                price = _safe_float(r.get("最新价"))
-                chg = _safe_float(r.get("涨跌幅"))
-                idx_table.add_row(name, _fmt_price(price), _fmt_chg(chg))
+        for ticker, label in _IDX_TICKERS.items():
+            t = yf.Ticker(ticker)
+            fi = t.fast_info
+            price = fi.get("lastPrice") or fi.get("regularMarketPrice")
+            prev = fi.get("regularMarketPreviousClose") or fi.get("previousClose")
+            if price and prev:
+                chg = (price - prev) / prev * 100
+                idx_table.add_row(label, _fmt_price(price), _fmt_chg(chg))
+            elif price:
+                idx_table.add_row(label, _fmt_price(price), "[dim]—[/dim]")
     except Exception as e:
         idx_table.caption = f"[red]指数数据获取失败: {e}[/red]"
 
@@ -88,58 +96,69 @@ def _overview(ak: AKShareProvider, cg: CoinGeckoProvider):
     fxc_table.add_column("最新价", justify="right")
     fxc_table.add_column("涨跌幅", justify="right")
 
-    # Forex: USDCNY + DXY
+    # Forex + DXY (yfinance fast_info)
+    _FX_TICKERS = {
+        "USDCNY=X": "美元/人民币", "EURUSD=X": "欧元/美元",
+        "USDJPY=X": "美元/日元", "GBPUSD=X": "英镑/美元",
+        "AUDUSD=X": "澳元/美元", "USDCAD=X": "美元/加元",
+        "DX-Y.NYB": "美元指数",
+    }
     try:
-        fx_df = ak.get_forex_spot()
-        targets = {"美元/人民币", "欧元/美元", "美元/日元", "英镑/美元", "美元/加元", "澳元/美元"}
-        fx_df_filtered = fx_df[fx_df["名称"].isin(targets)]
-        for _, r in fx_df_filtered.iterrows():
-            price = _safe_float(r.get("最新价"))
-            chg = _safe_float(r.get("涨跌幅"))
-            fxc_table.add_row(str(r.get("名称", "")), _fmt_price(price), _fmt_chg(chg))
-
-        # DXY from yfinance (use AKShare forex if available under "美元指数")
-        dxy_row = fx_df[fx_df["名称"].str.contains("美元指数", na=False)]
-        if not dxy_row.empty:
-            r = dxy_row.iloc[0]
-            price = _safe_float(r.get("最新价"))
-            chg = _safe_float(r.get("涨跌幅"))
-            fxc_table.add_row("美元指数 DXY", _fmt_price(price), _fmt_chg(chg))
+        for ticker, label in _FX_TICKERS.items():
+            t = yf.Ticker(ticker)
+            fi = t.fast_info
+            price = fi.get("lastPrice") or fi.get("regularMarketPrice")
+            prev = fi.get("regularMarketPreviousClose") or fi.get("previousClose")
+            if price and prev:
+                chg = (price - prev) / prev * 100
+                fxc_table.add_row(label, _fmt_price(price), _fmt_chg(chg))
+            elif price:
+                fxc_table.add_row(label, _fmt_price(price), "[dim]—[/dim]")
     except Exception:
         pass
 
-    # Commodities
-    cmods = {"COMEX黄金": "黄金", "COMEX白银": "白银", "WTI原油": "美原油",
-             "布伦特原油": "布伦特", "COMEX铜": "铜", "天然气": "天然气"}
+    # Commodities (yfinance fast_info)
+    _COMMODITY_SPOT_TICKERS = {
+        "GC=F": "黄金", "SI=F": "白银", "CL=F": "美原油",
+        "BZ=F": "布伦特", "HG=F": "铜", "NG=F": "天然气",
+    }
     try:
-        fut_df = ak.get_futures_spot()
-        for kw, label in cmods.items():
-            rows = fut_df[fut_df["名称"].str.contains(kw, na=False)]
-            if not rows.empty:
-                r = rows.iloc[0]
-                price = _safe_float(r.get("最新价"))
-                chg = _safe_float(r.get("涨跌幅"))
+        for ticker, label in _COMMODITY_SPOT_TICKERS.items():
+            t = yf.Ticker(ticker)
+            fi = t.fast_info
+            price = fi.get("lastPrice") or fi.get("regularMarketPrice")
+            prev = fi.get("regularMarketPreviousClose") or fi.get("previousClose")
+            if price and prev:
+                chg = (price - prev) / prev * 100
                 fxc_table.add_row(label, _fmt_price(price), _fmt_chg(chg))
+            elif price:
+                fxc_table.add_row(label, _fmt_price(price), "[dim]—[/dim]")
     except Exception:
         pass
 
     console.print(fxc_table)
 
-    # --- Crypto table ---
+    # --- Crypto table (yfinance fast_info) ---
     crypto_table = Table(title="加密货币", border_style="magenta")
     crypto_table.add_column("名称", style="bold")
     crypto_table.add_column("最新价", justify="right")
     crypto_table.add_column("24h涨跌", justify="right")
 
-    for sym in ("BTC", "ETH"):
-        try:
-            md = cg.get_market_data(sym)
-            if md:
-                price = md.get("price")
-                chg = md.get("change_24h")
-                crypto_table.add_row(sym, _fmt_price(price), _fmt_chg(chg))
-        except Exception:
-            crypto_table.add_row(sym, "[dim]unavailable[/dim]", "[dim]—[/dim]")
+    _CRYPTO_TICKERS = {"BTC-USD": "BTC", "ETH-USD": "ETH"}
+    try:
+        for ticker, label in _CRYPTO_TICKERS.items():
+            t = yf.Ticker(ticker)
+            fi = t.fast_info
+            price = fi.get("lastPrice") or fi.get("regularMarketPrice")
+            prev = fi.get("regularMarketPreviousClose") or fi.get("previousClose")
+            if price and prev:
+                chg = (price - prev) / prev * 100
+                crypto_table.add_row(label, _fmt_price(price), _fmt_chg(chg))
+            elif price:
+                crypto_table.add_row(label, _fmt_price(price), "[dim]—[/dim]")
+    except Exception:
+        crypto_table.add_row("BTC", "[dim]unavailable[/dim]", "[dim]—[/dim]")
+        crypto_table.add_row("ETH", "[dim]unavailable[/dim]", "[dim]—[/dim]")
 
     console.print(crypto_table)
 
@@ -464,4 +483,4 @@ def spot(ticker: str, market: str, watchlist: str, limit: int):
     if ticker:
         return _ticker_detail(ak, cg, ticker)
 
-    _overview(ak, cg)
+    _overview()
