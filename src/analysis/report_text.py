@@ -8,10 +8,10 @@ from .base import AbstractAnalyzer, AnalysisContext, AnalysisResult, Signal
 
 # Audit opinion patterns (ordered by severity — first match wins)
 AUDIT_PATTERNS = [
-    ("无法表示意见", "audit_disclaimer", "bearish", 1.0),
-    ("否定意见", "audit_adverse", "bearish", 1.0),
     ("标准无保留意见", "audit_clean", "bullish", 0.2),
     ("无保留意见", "audit_clean", "bullish", 0.1),
+    ("无法表示意见", "audit_disclaimer", "bearish", 1.0),
+    ("否定意见", "audit_adverse", "bearish", 1.0),
     ("保留意见", "audit_qualified", "bearish", 0.7),
 ]
 
