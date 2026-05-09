@@ -20,9 +20,9 @@ console = Console()
 @click.option("--intraday", "-i", default=None,
               help="Also fetch intraday bars: 1m/5m/15m/30m/60m/1h")
 def ohlcv(ticker: str, start: str, end: str, intraday: str):
-    """Fetch daily OHLCV bars for a ticker.
+    """个股日线 OHLCV — A股/港股/美股.
 
-    Use --intraday to also fetch and persist intraday minute bars.
+    --intraday 可同时拉取盘中分钟K线。
     """
     end = end or date.today().strftime("%Y-%m-%d")
     symbol, market = parse_ticker(ticker)

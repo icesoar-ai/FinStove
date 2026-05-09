@@ -29,9 +29,9 @@ FOREX_PAIRS = {
 @click.option("--end", default="", help="End date (default: today)")
 @click.option("--spot", is_flag=True, default=False, help="Also save a real-time spot snapshot")
 def forex_data(pair: str, start: str, end: str, spot: bool):
-    """Fetch forex pair daily rates (USD/CNY, EUR/CNY, JPY/CNY, etc.).
+    """外汇汇率日线 — 美元/人民币, 欧元/人民币, 日元/人民币等 9 对.
 
-    No pair: fetches all 9 forex pairs.
+    不带参数：拉取全部 9 个汇率对。
     """
     from src.data.providers.yfinance import YFinanceProvider
 

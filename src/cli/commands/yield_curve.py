@@ -15,9 +15,9 @@ console = Console()
 @click.command("yield-curve")
 @click.option("--history/--latest", default=False, help="Show historical curve instead of latest snapshot")
 def yield_curve_data(history: bool):
-    """Display US Treasury yield curve (3M, 1Y, 2Y, 5Y, 10Y, 30Y).
+    """美国国债收益率曲线 — 3月/1年/2年/5年/10年/30年.
 
-    Requires FRED_API_KEY environment variable.
+    需要环境变量 FRED_API_KEY。
     """
     from src.data.providers.fred import FREDProvider
 

@@ -30,9 +30,9 @@ COMMODITIES = {
 @click.option("--end", default="", help="End date (default: today)")
 @click.option("--spot", is_flag=True, default=False, help="Also save a real-time spot snapshot")
 def commodity_data(symbol: str, start: str, end: str, spot: bool):
-    """Fetch commodity futures daily OHLCV (Gold, Oil, Copper, Natural Gas, etc.).
+    """大宗商品期货日线 — 黄金/原油/铜/天然气等 10 种.
 
-    No symbol: fetches all commodities.
+    不带参数：拉取全部品种。
     """
     from src.data.providers.yfinance import YFinanceProvider
 

@@ -36,18 +36,18 @@ MARKET_MAP = {
 @click.option("--end", default="", help="End date (default: today)")
 @click.option("--spot", is_flag=True, default=False, help="Also save a real-time spot snapshot")
 def index_data(market: str, symbol: str, start: str, end: str, spot: bool):
-    """Fetch stock index daily data — CN + global markets.
+    """全球指数日线 — A股/美股/港股/日股/英股/德股/法股.
 
     \b
-    Examples:
-      index                  # Fetch ALL indices (CN + global)
-      index cn               # All CN indices (via AKShare)
-      index us               # All US indices (via Yahoo Finance)
-      index cn 000300        # CSI 300 only
-      index us SPX           # S&P 500 only
-      index hk               # Hang Seng Index
+    示例:
+      index                  # 拉取全部指数
+      index cn               # A股指数 (via AKShare)
+      index us               # 美股指数 (via Yahoo Finance)
+      index cn 000300        # 沪深300
+      index us SPX           # 标普500
+      index hk               # 恒生指数
 
-    Valid markets: cn, us, hk, jp, uk, de, fr
+    支持市场: cn, us, hk, jp, uk, de, fr
     """
     end = end or date.today().strftime("%Y-%m-%d")
     cache = DataCache()

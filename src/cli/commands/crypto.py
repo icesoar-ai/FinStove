@@ -30,12 +30,10 @@ CRYPTOS = {
 @click.option("--source", default="yfinance", help="Data source: yfinance (default) | coingecko")
 @click.option("--spot", is_flag=True, default=False, help="Also save a real-time spot snapshot")
 def crypto_data(symbol: str, start: str, end: str, source: str, spot: bool):
-    """Fetch cryptocurrency daily OHLCV (BTC, ETH, SOL, etc.).
+    """加密货币日线 — BTC/ETH/SOL 等.
 
-    Default source: yfinance (fast, no rate limit).
-    Use --source coingecko for market cap data.
-
-    No symbol: fetches BTC + ETH only.
+    默认数据源 yfinance，--source coingecko 可获取市值数据。
+    不带参数：拉取 BTC + ETH。
     """
     from src.data.providers.yfinance import YFinanceProvider
 
