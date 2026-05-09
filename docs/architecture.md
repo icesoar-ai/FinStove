@@ -110,7 +110,7 @@ SQLite 丢了不影响数据完整性，只会多一两次 API 请求。
 
 | 模块 | 功能 | 免费数据源 |
 |------|------|-----------|
-| macro | 利率/收益率曲线/CPI/PMI/GDP/DXY | FRED + AKShare |
+| macro | 利率/收益率曲线/CPI/PPI/PMI(官方+财新+非制造业)/GDP/DXY/M2/社融/进出口/就业/工业 | FRED + AKShare |
 | capital_flow | 沪深港通/机构/板块轮动/跨资产 | AKShare + yfinance |
 | technical | 多时间框架(日/周/月)趋势/动量/成交量/支撑阻力/形态 | yfinance/AKShare OHLCV |
 | fundamental | 多方法估值(FCFF/FCFE/DDM/Graham/EPV等) + 财务健康/盈利质量 | AKShare 财报 + yfinance |
@@ -227,7 +227,7 @@ Click + Rich:
 - `stocks-cli report-analyze <TICKER>` — 年报文本分析
 - `stocks-cli market-scan` — 多市场概览
 - `stocks-cli analyze-stock <TICKER>` — 个股深度
-- `stocks-cli macro-check` — 宏观环境
+- `stocks-cli macro-check` — 宏观环境 (CN 15+指标 + US via FRED)
 - `stocks-cli capital-flow` — 资金流向
 - `stocks-cli sentiment-check` — 情绪检测
 - `stocks-cli correlation-check` — 跨市场联动
@@ -247,7 +247,7 @@ Skill 只做编排（调 Python CLI），不含分析逻辑：
 - `/fetch-forex [PAIR]` — 外汇汇率
 - `/fetch-crypto [SYMBOL]` — 加密货币
 - `/fetch-yield-curve` — 美债收益率曲线
-- `/macro-check` — 宏观评估
+- `/macro-check` — 宏观评估 (CN 15+指标 + US)
 - `/valuation` — 估值分析 (10种方法)
 - `/full-report` — 综合多维分析
 - `/spot` — 实时行情（全球指数/外汇/商品/加密货币/个股）
@@ -350,19 +350,19 @@ diskcache (SQLite缓存)
 - [x] 全球指数 (HK/JP/UK/DE/FR) — 2026-05-08
 - [x] 加密货币 CLI/Skill 暴露 — 2026-05-08
 - [x] 美债完整收益率曲线 (3M→30Y) — 2026-05-08
-- [ ] `providers/news.py` — RSS 新闻抓取 + NLP 情绪
+- [x] `providers/news.py` — 新闻抓取 (AKShare 东方财富 + CCTV) + NLP 情绪 (jieba + 金融情感词典)
 
 **CLI + Skills (Phase 3 遗留):**
 - [ ] `market-scan` — 多市场概览 `/market-scan`
-- [ ] `capital-flow` — 资金流向 `/capital-flow`
-- [ ] `sentiment-check` — 情绪检测 `/sentiment-check`
+- [x] `capital-flow` — 资金流向 `flow` CLI + `/fetch-flow` Skill (沪深港通北向/南向)
+- [x] `sentiment-check` — 情绪检测 `/sentiment` (个股级，非全市场; jieba + 金融情感词典)
 - [ ] `correlation-check` — 跨市场联动 `/correlation-check`
 - [ ] `risk-check` — 风险评估 `/risk-check`
 - [ ] `benchmark` — 基准对比 `/benchmark`
 - [ ] `scenario` — 情景分析 `/scenario`
 
 **基本面 (Phase 3 遗留):**
-- [ ] 财报文本分析 (MarkItDown 已集成，提取会计政策/关联交易/风险因素/管理层展望)
+- [x] 财报文本分析 (/report-analyze: 审计意见/指标提取/风险因素/管理层展望; MarkItDown 已集成)
 - [x] AKShare 三张表接口不稳定 → 已切换到同花顺 stock_financial_*_ths，三张表稳定可用
 
 **Phase 5 打磨:**
@@ -383,6 +383,7 @@ diskcache (SQLite缓存)
 - [x] normalizer.py 函数补全 (2026-05-08) — 修复 normalize_dates/normalize_columns 缺失导致技术分析报错
 - [x] SHIBOR 数据获取修复 (2026-05-08) — 使用 macro_china_shibor_all 获取全期限利率
 - [x] 宏观数据聚合器 (2026-05-08) — 整合 CN(AKShare) + US(FRED) + DXY + Crypto
+- [x] 宏观数据扩展 (2026-05-09) — CN 新增 PPI, GDP, 财新/非制造业PMI, M1/M2, 社融, LPR, 外汇储备, 进出口, 工业增加值, 社消零售, 失业率, 国债收益率曲线
 - [ ] A 股幸存者偏差处理 (退市公司历史)
 - [ ] 前视偏差检测 (财报发布日期 vs 截止日)
 - [ ] 复权数据校验

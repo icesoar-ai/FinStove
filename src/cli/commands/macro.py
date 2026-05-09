@@ -6,7 +6,6 @@ from rich.table import Table
 from src.analysis.base import AnalysisContext
 from src.analysis.macro import MacroAnalyzer
 from src.data.base import Market as MktEnum
-from src.data.cache import DataCache
 from src.data.models import Ticker as TickerModel
 from src.data.macro_data import get_all_macro_data
 
@@ -19,6 +18,8 @@ def macro_check(country: str):
     """宏观环境评估 — 利率/通胀/GDP/PMI/收益率曲线/汇率/商品.
 
     整合 CN (AKShare) + US (FRED) 宏观数据，产出综合宏观评分。
+    CN 覆盖: CPI, PPI, PMI(官方/财新/非制造业), GDP, SHIBOR, LPR, M1/M2,
+             社会融资, 外汇储备, 进出口, 工业增加值, 社消零售, 失业率, 国债收益率曲线.
     """
     countries = [c.strip().upper() for c in country.split(",")]
     console.print(f"[bold blue]Macro Check: {', '.join(countries)}[/bold blue]")
@@ -57,61 +58,119 @@ def macro_check(country: str):
         console.print(table)
 
     # Display raw data summary
+    _print_data_summary(macro_data)
+
+
+def _print_data_summary(md: dict):
     console.print("\n[bold]数据摘要:[/bold]")
-    if macro_data.get("policy_rate"):
-        for c, v in macro_data["policy_rate"].items():
-            console.print(f"  {c} 政策利率：{v:.2f}%")
-    if macro_data.get("cpi_yoy"):
-        for c, v in macro_data["cpi_yoy"].items():
+    # --- 价格 ---
+    if md.get("cpi_yoy"):
+        for c, v in md["cpi_yoy"].items():
             console.print(f"  {c} CPI 同比：{v:.1f}%")
-    if macro_data.get("gdp_growth"):
-        for c, v in macro_data["gdp_growth"].items():
+    if md.get("ppi_yoy"):
+        for c, v in md["ppi_yoy"].items():
+            console.print(f"  {c} PPI 同比：{v:.1f}%")
+    # --- 增长 ---
+    if md.get("gdp_growth"):
+        for c, v in md["gdp_growth"].items():
             console.print(f"  {c} GDP 增速：{v:.1f}%")
-    if macro_data.get("pmi"):
-        for c, v in macro_data["pmi"].items():
+    if md.get("industrial_production"):
+        console.print(f"  CN 工业增加值同比：{md['industrial_production']:.1f}%")
+    if md.get("retail_sales_growth"):
+        console.print(f"  CN 社消零售同比：{md['retail_sales_growth']:.1f}%")
+    # --- 利率 ---
+    if md.get("policy_rate"):
+        for c, v in md["policy_rate"].items():
+            console.print(f"  {c} 政策利率：{v:.2f}%")
+    if md.get("lpr"):
+        lpr = md["lpr"]
+        console.print(f"  CN LPR：1Y={lpr.get('1Y', 'N/A'):.2f}%, 5Y={lpr.get('5Y', 'N/A'):.2f}%")
+    if md.get("shibor"):
+        shibor = md["shibor"]
+        console.print(f"  CN SHIBOR: ON={shibor.get('ON', 'N/A'):.2f}%, 1Y={shibor.get('1Y', 'N/A'):.2f}%")
+    # --- 景气 ---
+    if md.get("pmi"):
+        for c, v in md["pmi"].items():
             console.print(f"  {c} PMI: {v:.1f}")
-    if macro_data.get("yield_curve"):
-        for c, curve in macro_data["yield_curve"].items():
-            if curve:
-                s10y = curve.get("10Y", "N/A")
-                s2y = curve.get("2Y", "N/A")
-                if s10y and s2y:
+    if md.get("pmi_caixin"):
+        console.print(f"  CN 财新制造业PMI: {md['pmi_caixin']:.1f}")
+    if md.get("pmi_non_man"):
+        console.print(f"  CN 非制造业PMI: {md['pmi_non_man']:.1f}")
+    # --- 货币信贷 ---
+    if md.get("m2_growth"):
+        console.print(f"  CN M2 同比：{md['m2_growth']:.1f}%")
+    if md.get("m1_growth"):
+        console.print(f"  CN M1 同比：{md['m1_growth']:.1f}%")
+    if md.get("social_financing"):
+        console.print(f"  CN 社会融资增量：{md['social_financing']:.0f}亿")
+    # --- 外贸 ---
+    if md.get("exports_yoy"):
+        console.print(f"  CN 出口同比：{md['exports_yoy']:+.1f}%")
+    if md.get("imports_yoy"):
+        console.print(f"  CN 进口同比：{md['imports_yoy']:+.1f}%")
+    if md.get("fx_reserves"):
+        console.print(f"  CN 外汇储备：${md['fx_reserves']:,.1f}亿")
+    # --- 就业 ---
+    if md.get("unemployment"):
+        for c, v in md["unemployment"].items():
+            console.print(f"  {c} 失业率：{v:.1f}%")
+    # --- 收益率曲线 ---
+    if md.get("yield_curve"):
+        for c, curve in md["yield_curve"].items():
+            if not curve:
+                continue
+            # Try to find long/short keys in both US (10Y/2Y) and CN (10年/1年) format
+            keys = list(curve.keys())
+            if len(keys) >= 2:
+                # US format
+                s10y = curve.get("10Y")
+                s2y = curve.get("2Y")
+                # CN format
+                s10y_cn = curve.get("10年")
+                s1y_cn = curve.get("1年")
+                if s10y is not None and s2y is not None:
                     spread = float(s10y) - float(s2y)
                     console.print(f"  {c} 收益率曲线：10Y={s10y:.2f}%, 2Y={s2y:.2f}%, 利差={spread:+.2f}%")
-    if macro_data.get("dxy"):
-        console.print(f"  美元指数 (DXY): {macro_data['dxy']:.1f}")
-    if macro_data.get("crypto"):
-        for coin, data in macro_data["crypto"].items():
+                elif s10y_cn is not None and s1y_cn is not None:
+                    spread = float(s10y_cn) - float(s1y_cn)
+                    console.print(f"  {c} 收益率曲线：10Y={s10y_cn:.2f}%, 1Y={s1y_cn:.2f}%, 利差={spread:+.2f}%")
+                else:
+                    # Just show what we have
+                    items = ", ".join(f"{k}={v:.2f}%" for k, v in curve.items())
+                    console.print(f"  {c} 收益率曲线：{items}")
+    # --- DXY ---
+    if md.get("dxy"):
+        console.print(f"  美元指数 (DXY): {md['dxy']:.1f}")
+    # --- Crypto ---
+    if md.get("crypto"):
+        for coin, data in md["crypto"].items():
             if data.get("price"):
                 chg = data.get("change_24h")
                 chg_str = f"{chg:+.1f}%" if chg else "N/A"
                 console.print(f"  {coin.upper()}: ${data['price']:,.0f} (24h {chg_str})")
-
-    # ---- Commodities ----
-    if macro_data.get("gold"):
-        console.print(f"  黄金 (COMEX): ${macro_data['gold']:,.1f}")
-    if macro_data.get("oil_wti") or macro_data.get("oil_brent"):
+    # --- Commodities ---
+    if md.get("gold"):
+        console.print(f"  黄金 (COMEX): ${md['gold']:,.1f}")
+    if md.get("oil_wti") or md.get("oil_brent"):
         parts = []
-        if macro_data.get("oil_wti"):
-            parts.append(f"WTI ${macro_data['oil_wti']:,.1f}")
-        if macro_data.get("oil_brent"):
-            parts.append(f"Brent ${macro_data['oil_brent']:,.1f}")
+        if md.get("oil_wti"):
+            parts.append(f"WTI ${md['oil_wti']:,.1f}")
+        if md.get("oil_brent"):
+            parts.append(f"Brent ${md['oil_brent']:,.1f}")
         console.print(f"  原油: {' | '.join(parts)}")
-
-    # ---- Forex snapshot ----
-    if macro_data.get("forex"):
+    # --- Forex ---
+    if md.get("forex"):
         forex_names = {"USDCNY": "美元/人民币", "EURCNY": "欧元/人民币", "JPYCNY": "日元/人民币"}
-        for pair, rate in macro_data["forex"].items():
+        for pair, rate in md["forex"].items():
             label = forex_names.get(pair, pair)
             console.print(f"  {label}: {rate:.4f}")
-
-    # ---- Global indices ----
-    if macro_data.get("global_indices"):
+    # --- Global Indices ---
+    if md.get("global_indices"):
         index_names = {
             "us_SPX": "S&P 500", "us_NDX": "Nasdaq", "hk_HSI": "恒生指数",
             "jp_N225": "日经225", "de_DAX": "DAX 40", "uk_FTSE": "FTSE 100", "fr_CAC": "CAC 40",
         }
         console.print("  全球指数:")
-        for key, val in macro_data["global_indices"].items():
+        for key, val in md["global_indices"].items():
             label = index_names.get(key, key)
             console.print(f"    {label}: {val:,.0f}")

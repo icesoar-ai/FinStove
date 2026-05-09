@@ -37,7 +37,7 @@ python -m src.cli.main --help
 |-------|------|
 | `/analyze-stock <TICKER>` | 技术分析（趋势/动量/成交量/支撑阻力） |
 | `/valuation <TICKER>` | 基本面估值（10 种方法：FCFF/FCFE/DDM/Graham/EPV/NCAV/RI/倍数/FCF质量/财务健康） |
-| `/macro-check` | 宏观环境评估（利率/通胀/GDP/PMI/收益率曲线） |
+| `/macro-check` | 宏观环境评估（CN 15+指标: CPI/PPI/PMI/GDP/M2/社融/LPR/进出口/就业/国债收益率 + US via FRED） |
 | `/sentiment <TICKER>` | 新闻情绪分析（jieba 分词 + 金融情感词典） |
 | `/report-analyze <TICKER>` | 年报文本分析（审计意见/指标提取/风险因素/管理层展望） |
 | `/full-report <TICKER>` | 综合多维分析报告（10 维度加权评分） |

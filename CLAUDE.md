@@ -47,7 +47,7 @@ python -m src.cli.main ohlcv <TICKER> [--intraday] # 拉取日线 OHLCV
 python -m src.cli.main financials <TICKER>         # 财务数据
 python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
 python -m src.cli.main analyze-stock <TICKER>      # 技术分析
-python -m src.cli.main macro-check                 # 宏观评估
+python -m src.cli.main macro-check                 # 宏观评估 (CN 15+指标 + US via FRED)
 python -m src.cli.main index [MARKET] [CODE]       # 全球指数 (cn/us/hk/jp/uk/de/fr)
 python -m src.cli.main commodity [CODE]            # 大宗商品 (黄金/原油/铜/天然气)
 python -m src.cli.main forex [PAIR]                # 外汇汇率
@@ -70,7 +70,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - `/fetch-crypto [SYMBOL]` — 加密货币
 - `/fetch-flow` — 资金流向数据
 - `/fetch-yield-curve` — 美债收益率曲线
-- `/macro-check` — 宏观环境评估
+- `/macro-check` — 宏观环境评估 (CN CPI/PPI/PMI/GDP/M2/社融/LPR/进出口/就业/国债收益率 + US via FRED)
 - `/valuation <TICKER>` — 基本面估值分析 (10种方法)
 - `/full-report <TICKER>` — 综合多维分析报告
 - `/spot` — 实时行情查询（全球指数/外汇/商品/加密货币/A股/港股/美股）
@@ -84,7 +84,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 | 层 | 模块 | 状态 |
 |----|------|------|
-| 数据 | AKShare (A股日线/指数/宏观/三张表 via 同花顺) | 可用 |
+| 数据 | AKShare (A股日线/指数/15+宏观指标/三张表 via 同花顺) | 可用 |
 | 数据 | YFinance (全球股票/商品/外汇/指数/加密货币) | 可用 (受速率限制) |
 | 数据 | CNINFO (年报PDF+MD) | 可用 |
 | 数据 | 实时行情 (YFinance 概览 + AKShare 个股) | 可用 |
@@ -94,7 +94,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 | 分析 | 新闻 NLP 情绪 (jieba + 金融情感词典) | 可用 |
 | 分析 | 年报文本分析 (审计意见/指标提取/风险/展望) | 可用 |
 | 分析 | 技术分析 | 可用 |
-| 分析 | 宏观分析 | 可用 (中国数据) |
+| 分析 | 宏观分析 | 可用 (CN 15+指标 + US FRED) |
 | 分析 | 基本面估值 (10方法) | 可用 |
 | 分析 | 其余 7 模块 | 代码完成 |
 | 集成 | 打分/聚合/报告 | 可用 |
@@ -104,7 +104,7 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 
 - AKShare 被东方财富频繁限流，新 ticker 首次拉取可能失败
 - 详细三张表使用同花顺接口 (stock_financial_*_ths)，已替代不稳定的东方财富接口
-- RSS news provider 未实现（CoinGecko 已实现）
+- 新闻抓取使用 AKShare 东方财富 + CCTV，未实现 RSS 源
 - yfinance 批量拉取有限速，多品种间需加间隔
 - FRED 需要环境变量 `FRED_API_KEY`（免费申请）
 - 商品期货数据来自连续主力合约 (`GC=F`)，非现货价格

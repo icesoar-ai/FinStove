@@ -2,7 +2,7 @@ import pandas as pd
 import re
 
 COLUMN_MAP = {
-    "date": ["date", "Date", "trade_date", "datetime", "时间", "日期"],
+    "date": ["date", "Date", "trade_date", "datetime", "时间", "日期", "报告日"],
     "open": ["open", "Open", "开盘", "open_price"],
     "high": ["high", "High", "最高", "high_price"],
     "low": ["low", "Low", "最低", "low_price"],

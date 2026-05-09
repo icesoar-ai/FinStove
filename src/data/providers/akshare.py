@@ -299,6 +299,166 @@ class AKShareProvider:
             return self._storage.merge_and_save(df, *key)
         return existing if not existing.empty else pd.DataFrame()
 
+    def get_ppi(self) -> pd.DataFrame:
+        key = ("macro", "cn", "ppi", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("ppi", 86400, self._ak.macro_china_ppi_yearly)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_gdp_cn(self) -> pd.DataFrame:
+        key = ("macro", "cn", "gdp", "quarterly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("gdp_cn", 86400, self._ak.macro_china_gdp_yearly)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_money_supply(self) -> pd.DataFrame:
+        key = ("macro", "cn", "money_supply", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("money_supply", 86400, self._ak.macro_china_money_supply)
+        if df is not None and not df.empty:
+            df = self._fix_month_column(df)
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_lpr(self) -> pd.DataFrame:
+        key = ("macro", "cn", "lpr", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("lpr", 86400, self._ak.macro_china_lpr)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_fx_reserves(self) -> pd.DataFrame:
+        key = ("macro", "cn", "fx_reserves", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("fx_reserves", 86400, self._ak.macro_china_fx_reserves_yearly)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_unemployment_cn(self) -> pd.DataFrame:
+        key = ("macro", "cn", "unemployment", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("unemployment_cn", 86400, self._ak.macro_china_urban_unemployment)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_exports_yoy(self) -> pd.DataFrame:
+        key = ("macro", "cn", "exports_yoy", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("exports_yoy", 86400, self._ak.macro_china_exports_yoy)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_imports_yoy(self) -> pd.DataFrame:
+        key = ("macro", "cn", "imports_yoy", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("imports_yoy", 86400, self._ak.macro_china_imports_yoy)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_industrial_production(self) -> pd.DataFrame:
+        key = ("macro", "cn", "industrial_production", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("industrial_production", 86400,
+                          self._ak.macro_china_industrial_production_yoy)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_retail_sales(self) -> pd.DataFrame:
+        key = ("macro", "cn", "retail_sales", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("retail_sales", 86400, self._ak.macro_china_consumer_goods_retail)
+        if df is not None and not df.empty:
+            df = self._fix_month_column(df)
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    @staticmethod
+    def _fix_month_column(df: pd.DataFrame) -> pd.DataFrame:
+        """Rename '月份' to 'date' with proper format parsing and ascending sort."""
+        if "月份" in df.columns:
+            df = df.copy()
+            df["date"] = pd.to_datetime(df["月份"], format="%Y年%m月份")
+            df = df.drop(columns=["月份"])
+            df = df.sort_values("date").reset_index(drop=True)
+        return df
+
+    def get_social_financing(self) -> pd.DataFrame:
+        key = ("macro", "cn", "social_financing", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("social_financing", 86400, self._ak.macro_china_shrzgm)
+        if df is not None and not df.empty:
+            df = self._fix_month_column(df)
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_caixin_pmi(self) -> pd.DataFrame:
+        key = ("macro", "cn", "caixin_pmi", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("caixin_pmi", 86400, self._ak.macro_china_cx_pmi_yearly)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_non_man_pmi(self) -> pd.DataFrame:
+        key = ("macro", "cn", "non_man_pmi", "monthly")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            return existing
+        df = self._cached("non_man_pmi", 86400, self._ak.macro_china_non_man_pmi)
+        if df is not None and not df.empty:
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
+    def get_bond_yield_cn(self) -> pd.DataFrame:
+        """China treasury bond yield curve (国债收益率)."""
+        key = ("macro", "cn", "bond_yield", "daily")
+        existing = self._storage.load(*key)
+        if not existing.empty:
+            _, last = self._storage.get_date_range(*key)
+            if last and last >= date.today() - timedelta(days=5):
+                return existing
+        df = self._cached("bond_yield_cn", 86400, self._ak.bond_china_yield)
+        if df is not None and not df.empty:
+            # Filter to 国债 rows only
+            if "曲线名称" in df.columns:
+                df = df[df["曲线名称"].str.contains("国债", na=False)]
+            return self._storage.merge_and_save(df, *key)
+        return existing if not existing.empty else pd.DataFrame()
+
     # ---- Spot / Real-Time Quotes (cached, no Parquet persistence) ----
 
     def get_a_share_spot(self) -> pd.DataFrame:

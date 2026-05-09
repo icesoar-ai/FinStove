@@ -56,9 +56,23 @@ data/
 │           └── daily.parquet
 ├── macro/           # 宏观经济
 │   ├── cn/
-│   │   ├── cpi/             └── monthly.parquet
-│   │   ├── pmi/             └── monthly.parquet
-│   │   └── shibor/          └── daily.parquet
+│   │   ├── cpi/                └── monthly.parquet
+│   │   ├── ppi/                └── monthly.parquet
+│   │   ├── pmi/                └── monthly.parquet
+│   │   ├── caixin_pmi/         └── monthly.parquet
+│   │   ├── non_man_pmi/        └── monthly.parquet
+│   │   ├── gdp/                └── quarterly.parquet
+│   │   ├── money_supply/       └── monthly.parquet
+│   │   ├── social_financing/   └── monthly.parquet
+│   │   ├── lpr/                └── monthly.parquet
+│   │   ├── fx_reserves/        └── monthly.parquet
+│   │   ├── exports_yoy/        └── monthly.parquet
+│   │   ├── imports_yoy/        └── monthly.parquet
+│   │   ├── industrial_production/ └── monthly.parquet
+│   │   ├── retail_sales/       └── monthly.parquet
+│   │   ├── unemployment/       └── monthly.parquet
+│   │   ├── bond_yield/         └── daily.parquet
+│   │   └── shibor/             └── daily.parquet
 │   └── us/
 │       ├── gdp/             └── quarterly.parquet
 │       ├── cpi/             └── monthly.parquet
