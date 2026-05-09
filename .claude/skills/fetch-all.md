@@ -15,12 +15,12 @@ trigger: /fetch-all
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main index       # 全球指数 (17)
-python -m src.cli.main commodity   # 大宗商品 (10)
-python -m src.cli.main forex       # 汇率 (9)
-python -m src.cli.main crypto      # BTC + ETH
-python -m src.cli.main yield-curve # 美债收益率曲线
-python -m src.cli.main summary     # 汇总报告
+python -m src.cli.main fetch index       # 全球指数 (17)
+python -m src.cli.main fetch commodity   # 大宗商品 (10)
+python -m src.cli.main fetch forex       # 汇率 (9)
+python -m src.cli.main fetch crypto      # BTC + ETH
+python -m src.cli.main fetch yield-curve # 美债收益率曲线
+python -m src.cli.main summary           # 汇总报告
 ```
 
 ## 覆盖范围

@@ -37,31 +37,39 @@ docs/               # 文档 (architecture.md, data-structure.md)
 ## CLI 命令
 
 ```bash
-python -m src.cli.main spot                        # 实时行情概览
-python -m src.cli.main spot -m cn [hk] [us]       # 涨跌榜
-python -m src.cli.main spot <TICKER>               # 个股实时行情
-python -m src.cli.main intraday <TICKER> [-i 5m]   # 盘中分钟K线
-python -m src.cli.main sentiment <TICKER> [-d DAYS] # 新闻情绪分析
-python -m src.cli.main report-analyze <TICKER>      # 年报文本分析
-python -m src.cli.main ohlcv <TICKER> [--intraday] # 拉取日线 OHLCV
-python -m src.cli.main financials <TICKER>         # 财务数据
-python -m src.cli.main reports <TICKER>            # 年报 PDF + MD
+# 数据抓取 (fetch)
+python -m src.cli.main fetch ohlcv <TICKER> [--intraday]
+python -m src.cli.main fetch index [MARKET] [CODE]
+python -m src.cli.main fetch commodity [CODE]
+python -m src.cli.main fetch forex [PAIR]
+python -m src.cli.main fetch crypto [SYMBOL]
+python -m src.cli.main fetch flow
+python -m src.cli.main fetch yield-curve
+python -m src.cli.main fetch financials <TICKER>
+python -m src.cli.main fetch reports <TICKER>
+
+# 实时行情 (live)
+python -m src.cli.main live spot                        # 实时行情概览
+python -m src.cli.main live spot -m cn [hk] [us]       # 涨跌榜
+python -m src.cli.main live spot <TICKER>               # 个股实时行情
+python -m src.cli.main live intraday <TICKER> [-i 5m]   # 盘中分钟K线
+
+# 分析
 python -m src.cli.main analyze-stock <TICKER>      # 技术分析
 python -m src.cli.main macro-check                 # 宏观评估 (CN 15+指标 + US via FRED)
-python -m src.cli.main index [MARKET] [CODE]       # 全球指数 (cn/us/hk/jp/uk/de/fr)
-python -m src.cli.main commodity [CODE]            # 大宗商品 (黄金/原油/铜/天然气)
-python -m src.cli.main forex [PAIR]                # 外汇汇率
-python -m src.cli.main crypto [SYMBOL]             # 加密货币
-python -m src.cli.main yield-curve                 # 美债收益率曲线
-python -m src.cli.main flow                        # 资金流向
 python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
 python -m src.cli.main full-report <TICKER>        # 综合多维分析
+python -m src.cli.main sentiment <TICKER> [-d DAYS] # 新闻情绪分析
+python -m src.cli.main report-analyze <TICKER>      # 年报文本分析
+python -m src.cli.main correlation-check           # 跨市场联动 (黄金/DXY/VIX)
+python -m src.cli.main risk-check <TICKER>         # 风险评估 (VaR/回撤/波动率)
+python -m src.cli.main benchmark <TICKER>          # 基准对比 (vs 指数)
+python -m src.cli.main scenario <TICKER>           # 情景分析 (乐观/悲观/敏感性)
+
+# 工具
 python -m src.cli.main review <TICKER>             # 回顾历史判断
-python -m src.cli.main correlation-check          # 跨市场联动 (黄金/DXY/VIX)
-python -m src.cli.main risk-check <TICKER>        # 风险评估 (VaR/回撤/波动率)
-python -m src.cli.main benchmark <TICKER>         # 基准对比 (vs 指数)
-python -m src.cli.main scenario <TICKER>          # 情景分析 (乐观/悲观/敏感性)
-python -m src.cli.main market-scan                # 多市场扫描 (全球资产涨跌幅+趋势)
+python -m src.cli.main market-scan                 # 多市场扫描
+python -m src.cli.main summary                     # 每日数据更新汇总
 ```
 
 ## Skills

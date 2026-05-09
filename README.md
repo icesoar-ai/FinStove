@@ -48,30 +48,29 @@ python -m src.cli.main --help
 | `/scenario <TICKER>` | 情景分析（52周高低点 + 波动率敏感性区间） |
 | `/market-scan` | 多市场扫描（全球资产 6维度涨跌幅 + 均线趋势） |
 
-## CLI 命令（24 个）
+## CLI 命令（2 组 + 13 命令，共 24 个子命令）
 
-### 数据抓取
+### 数据抓取 (`fetch`)
 
 ```bash
-python -m src.cli.main ohlcv <TICKER> [--start DATE] [--end DATE] [--intraday 5m]
-python -m src.cli.main index [MARKET] [CODE] [--start DATE] [--end DATE] [--spot]
-python -m src.cli.main commodity [CODE] [--start DATE] [--end DATE] [--spot]
-python -m src.cli.main forex [PAIR] [--start DATE] [--end DATE] [--spot]
-python -m src.cli.main crypto [SYMBOL] [--start DATE] [--end DATE] [--spot]
-python -m src.cli.main flow [--start DATE] [--end DATE]
-python -m src.cli.main yield-curve
-python -m src.cli.main financials <TICKER>
-python -m src.cli.main reports <TICKER>
+python -m src.cli.main fetch ohlcv <TICKER> [--start DATE] [-i 5m]
+python -m src.cli.main fetch index [MARKET] [CODE] [--spot]
+python -m src.cli.main fetch commodity [CODE] [--spot]
+python -m src.cli.main fetch forex [PAIR] [--spot]
+python -m src.cli.main fetch crypto [SYMBOL] [--spot]
+python -m src.cli.main fetch flow
+python -m src.cli.main fetch yield-curve
+python -m src.cli.main fetch financials <TICKER>
+python -m src.cli.main fetch reports <TICKER>
 ```
 
-### 实时行情
+### 实时行情 (`live`)
 
 ```bash
-python -m src.cli.main spot                           # 全球概览
-python -m src.cli.main spot -m cn [hk] [us]          # 涨跌榜
-python -m src.cli.main spot <TICKER>                  # 个股行情
-python -m src.cli.main spot -w config/watchlist.txt   # 自选股
-python -m src.cli.main intraday <TICKER> [-i 5m] [-p 5d] [--save]
+python -m src.cli.main live spot                     # 全球概览
+python -m src.cli.main live spot -m cn               # 涨跌榜
+python -m src.cli.main live spot <TICKER>            # 个股行情
+python -m src.cli.main live intraday <TICKER> [-i 5m]
 ```
 
 ### 分析

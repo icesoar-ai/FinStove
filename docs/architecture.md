@@ -220,21 +220,11 @@ src/track/
 - **Report**: Jinja2 模板 → markdown，三档(brief ~20行/standard ~60行/full ~200行)
 
 ### CLI (`src/cli/`)
-Click + Rich:
-- `stocks-cli spot [TICKER]` — 实时行情查询（概览/涨跌榜/个股/自选）
-- `stocks-cli intraday <TICKER>` — 盘中分钟K线（自动切换AKShare/yfinance）
-- `stocks-cli sentiment <TICKER>` — 新闻情绪分析
-- `stocks-cli report-analyze <TICKER>` — 年报文本分析
-- `stocks-cli market-scan` — 多市场概览
-- `stocks-cli analyze-stock <TICKER>` — 个股深度
-- `stocks-cli macro-check` — 宏观环境 (CN 15+指标 + US via FRED)
-- `stocks-cli capital-flow` — 资金流向
-- `stocks-cli sentiment-check` — 情绪检测
-- `stocks-cli correlation-check` — 跨市场联动
-- `stocks-cli risk-check <TICKER>` — 风险评估
-- `stocks-cli benchmark <TICKER>` — 基准对比
-- `stocks-cli scenario <TICKER>` — 情景分析
-- `stocks-cli full-report <TICKER>` — 全面综合报告
+Click + Rich，分三组:
+
+**数据抓取 (`fetch`):** ohlcv / index / commodity / forex / crypto / flow / yield-curve / financials / reports
+**实时行情 (`live`):** spot / intraday
+**分析与工具:** analyze-stock / macro-check / valuation / full-report / sentiment / report-analyze / correlation-check / risk-check / benchmark / scenario / review / market-scan / summary
 - `stocks-cli review <TICKER>` — 回顾历史判断
 
 ### Skills (`.claude/skills/`)
@@ -340,6 +330,7 @@ diskcache (SQLite缓存)
 | — | 年报分析: /report-analyze 命令 + ReportTextAnalyzer | ✓ 2026-05-09 |
 | — | 宏观数据扩展: CN 从 3→15+ 指标 (PPI/GDP/M2/社融/LPR/进出口/就业...) | ✓ 2026-05-09 |
 | — | Phase 3 CLI/Skills 收尾: correlation-check, risk-check, benchmark, scenario, market-scan | ✓ 2026-05-09 |
+| — | CLI 重组: fetch 组 (9) + live 组 (2) + 顶层 (13) | ✓ 2026-05-09 |
 
 ### 待完成
 

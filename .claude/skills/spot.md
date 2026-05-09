@@ -34,7 +34,7 @@ trigger: /spot
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main spot [TICKER] [-m MARKET] [-w WATCHLIST] [-n LIMIT]
+python -m src.cli.main live spot [TICKER] [-m MARKET] [-w WATCHLIST] [-n LIMIT]
 ```
 
 ## 注意事项

@@ -25,7 +25,7 @@ trigger: /intraday
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main intraday <TICKER> [-i INTERVAL] [-p PERIOD] [--save]
+python -m src.cli.main live intraday <TICKER> [-i INTERVAL] [-p PERIOD] [--save]
 ```
 
 ## 存储
