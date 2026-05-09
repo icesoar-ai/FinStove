@@ -219,6 +219,11 @@ class MacroDataAggregator:
         if oil_brent is not None:
             result["oil_brent"] = oil_brent
 
+        # ---- VIX (from Parquet) ----
+        vix_val = self._get_latest_close("index", "us", "VIX", "daily")
+        if vix_val is not None:
+            result["vix"] = vix_val
+
         # ---- Forex snapshot (from Parquet) ----
         result["forex"] = {}
         for pair in ["USDCNY", "EURCNY", "JPYCNY"]:

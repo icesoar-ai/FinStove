@@ -57,6 +57,11 @@ python -m src.cli.main flow                        # 资金流向
 python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
 python -m src.cli.main full-report <TICKER>        # 综合多维分析
 python -m src.cli.main review <TICKER>             # 回顾历史判断
+python -m src.cli.main correlation-check          # 跨市场联动 (黄金/DXY/VIX)
+python -m src.cli.main risk-check <TICKER>        # 风险评估 (VaR/回撤/波动率)
+python -m src.cli.main benchmark <TICKER>         # 基准对比 (vs 指数)
+python -m src.cli.main scenario <TICKER>          # 情景分析 (乐观/悲观/敏感性)
+python -m src.cli.main market-scan                # 多市场扫描 (全球资产涨跌幅+趋势)
 ```
 
 ## Skills
@@ -79,6 +84,11 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 - `/sentiment <TICKER>` — 新闻情绪分析（jieba分词+情感词典）
 - `/report-analyze <TICKER>` — 年报文本分析（审计意见/风险/展望）
 - `/review <TICKER>` — 回顾历史判断
+- `/correlation-check` — 跨市场联动分析 (黄金/DXY/VIX → Risk-On/Risk-Off)
+- `/risk-check <TICKER>` — 风险评估 (VaR/CVaR/最大回撤/波动率/流动性)
+- `/benchmark <TICKER>` — 基准对比 (vs 基准指数 + 股债性价比)
+- `/scenario <TICKER>` — 情景分析 (52周高低点 + 波动率敏感性区间)
+- `/market-scan` — 多市场扫描 (全球资产 1日/5日/1月/3月/6月 涨跌幅 + 均线趋势)
 
 ## 已实现模块
 

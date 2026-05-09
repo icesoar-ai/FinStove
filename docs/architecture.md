@@ -338,6 +338,8 @@ diskcache (SQLite缓存)
 | — | 盘中数据: /intraday 命令 + ohlcv --intraday flag (AKShare→yfinance 自动降级) | ✓ 2026-05-09 |
 | — | 新闻情绪: /sentiment 命令 + NewsProvider + jieba NLP 情感引擎 | ✓ 2026-05-09 |
 | — | 年报分析: /report-analyze 命令 + ReportTextAnalyzer | ✓ 2026-05-09 |
+| — | 宏观数据扩展: CN 从 3→15+ 指标 (PPI/GDP/M2/社融/LPR/进出口/就业...) | ✓ 2026-05-09 |
+| — | Phase 3 CLI/Skills 收尾: correlation-check, risk-check, benchmark, scenario, market-scan | ✓ 2026-05-09 |
 
 ### 待完成
 
@@ -353,13 +355,13 @@ diskcache (SQLite缓存)
 - [x] `providers/news.py` — 新闻抓取 (AKShare 东方财富 + CCTV) + NLP 情绪 (jieba + 金融情感词典)
 
 **CLI + Skills (Phase 3 遗留):**
-- [ ] `market-scan` — 多市场概览 `/market-scan`
+- [x] `market-scan` — 多市场概览 `/market-scan` (全球指数/商品/外汇/加密货币/A股，6维度涨跌幅+趋势)
 - [x] `capital-flow` — 资金流向 `flow` CLI + `/fetch-flow` Skill (沪深港通北向/南向)
 - [x] `sentiment-check` — 情绪检测 `/sentiment` (个股级，非全市场; jieba + 金融情感词典)
-- [ ] `correlation-check` — 跨市场联动 `/correlation-check`
-- [ ] `risk-check` — 风险评估 `/risk-check`
-- [ ] `benchmark` — 基准对比 `/benchmark`
-- [ ] `scenario` — 情景分析 `/scenario`
+- [x] `correlation-check` — 跨市场联动 `/correlation-check` (黄金/DXY/VIX → Risk-On/Risk-Off)
+- [x] `risk-check` — 风险评估 `/risk-check` (VaR/CVaR/最大回撤/波动率/流动性)
+- [x] `benchmark` — 基准对比 `/benchmark` (vs 基准指数 + 股债性价比)
+- [x] `scenario` — 情景分析 `/scenario` (52周高低点 + 波动率敏感性区间)
 
 **基本面 (Phase 3 遗留):**
 - [x] 财报文本分析 (/report-analyze: 审计意见/指标提取/风险因素/管理层展望; MarkItDown 已集成)

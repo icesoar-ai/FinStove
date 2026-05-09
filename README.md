@@ -9,7 +9,7 @@ pip install -e .
 python -m src.cli.main --help
 ```
 
-## Skills（18 个）
+## Skills（22 个）
 
 ### 数据抓取
 
@@ -42,8 +42,13 @@ python -m src.cli.main --help
 | `/report-analyze <TICKER>` | 年报文本分析（审计意见/指标提取/风险因素/管理层展望） |
 | `/full-report <TICKER>` | 综合多维分析报告（10 维度加权评分） |
 | `/review <TICKER>` | 回顾历史判断，对比实际走势 |
+| `/correlation-check` | 跨市场联动分析（黄金/DXY/VIX → Risk-On/Risk-Off） |
+| `/risk-check <TICKER>` | 风险评估（VaR/CVaR/最大回撤/波动率/流动性） |
+| `/benchmark <TICKER>` | 基准对比（vs 基准指数 + 股债性价比） |
+| `/scenario <TICKER>` | 情景分析（52周高低点 + 波动率敏感性区间） |
+| `/market-scan` | 多市场扫描（全球资产 6维度涨跌幅 + 均线趋势） |
 
-## CLI 命令（19 个）
+## CLI 命令（24 个）
 
 ### 数据抓取
 
@@ -79,6 +84,11 @@ python -m src.cli.main sentiment <TICKER> [-d 7]
 python -m src.cli.main report-analyze <TICKER>
 python -m src.cli.main full-report <TICKER> [--context long_term|short_term] [--format brief|standard|full]
 python -m src.cli.main review <TICKER>
+python -m src.cli.main correlation-check
+python -m src.cli.main risk-check <TICKER>
+python -m src.cli.main benchmark <TICKER>
+python -m src.cli.main scenario <TICKER>
+python -m src.cli.main market-scan
 ```
 
 ### 工具

@@ -27,6 +27,11 @@ from src.cli.commands.sentiment import sentiment
 from src.cli.commands.crypto import crypto_data
 from src.cli.commands.yield_curve import yield_curve_data
 from src.cli.commands.spot import spot
+from src.cli.commands.correlation import correlation_check
+from src.cli.commands.risk import risk_check
+from src.cli.commands.benchmark import benchmark
+from src.cli.commands.scenario import scenario
+from src.cli.commands.market_scan import market_scan
 from src.cli.commands.summary import daily_summary
 
 
@@ -54,6 +59,11 @@ cli.add_command(sentiment)
 cli.add_command(crypto_data)
 cli.add_command(yield_curve_data)
 cli.add_command(spot)
+cli.add_command(correlation_check)
+cli.add_command(risk_check)
+cli.add_command(benchmark)
+cli.add_command(scenario)
+cli.add_command(market_scan)
 cli.add_command(daily_summary)
 
 
