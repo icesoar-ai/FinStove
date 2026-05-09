@@ -372,9 +372,12 @@ diskcache (SQLite缓存)
 - [ ] 并行化分析模块 (ThreadPoolExecutor)
 - [ ] 数据源健康检查 + 降级
 - [ ] `--watchlist` 批量分析
-- [ ] 可选 Streamlit dashboard
+- [ ] Streamlit dashboard (demo 骨架 `dashboard_demo.py`，需求待细化)
 
 **数据质量:**
+- [ ] A 股幸存者偏差处理 (退市公司历史)
+- [ ] 前视偏差检测 (财报发布日期 vs 截止日)
+- [ ] 复权数据校验
 - [x] 同花顺财务数据清洗 (normalize_financials, 2026-05-07) — 存储层统一转换带单位字符串为浮点数
 - [x] 估值方法 NaN 传播修复 (2026-05-07) — 所有 10 个方法的 float(x or 0) 陷阱已修复
 - [x] 估值方法失败原因标注 (reason 字段，2026-05-07) — 区分"数据缺失"、"模型不适用"、"结果不合理"
