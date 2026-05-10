@@ -56,10 +56,9 @@
 
 ### Data Layer (`src/data/`)
 
-**Provider 协议**: 按能力拆分为 StockProvider, MacroProvider, FlowProvider 等 Protocol，组合优于继承
-**ProviderRegistry**: `(Market, AssetType) → Provider` 路由表，读 `config/providers.yaml`
-**标准化**: 所有数据通过 Pydantic models (OHLCVRow, MacroPoint, FlowData) 和 normalizer 统一
-**适配器**: akshare(CN), yfinance(global), fred(US macro), coingecko(crypto), news(RSS+爬虫)
+**DataGateway**: 统一数据网关 (`gateway.py`)，CLI 唯一入口。持有 6 个 Provider，内置降级策略 (A股 AKShare → yfinance)，统一 Parquet/SQLite 读写路径，聚合宏观数据。
+**Provider 适配器**: akshare(CN), yfinance(global), fred(US macro), coingecko(crypto), cninfo(年报), news(东方财富+CCTV)
+**标准化**: 所有数据通过 normalizer 统一
 
 **存储方案：Parquet（原始数据）+ SQLite（API 请求缓存）两层架构**
 
@@ -331,6 +330,7 @@ diskcache (SQLite缓存)
 | — | 宏观数据扩展: CN 从 3→15+ 指标 (PPI/GDP/M2/社融/LPR/进出口/就业...) | ✓ 2026-05-09 |
 | — | Phase 3 CLI/Skills 收尾: correlation-check, risk-check, benchmark, scenario, market-scan | ✓ 2026-05-09 |
 | — | CLI 重组: fetch 组 (9) + live 组 (2) + 顶层 (13) | ✓ 2026-05-09 |
+| — | DataGateway: 统一数据网关 (降级/缓存/PQ读写/macro聚合) | ✓ 2026-05-10 |
 
 ### 待完成
 
