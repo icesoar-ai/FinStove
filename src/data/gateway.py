@@ -249,9 +249,14 @@ class DataGateway:
     # ── 财务 / 年报 ───────────────────────────────────
 
     def get_financials(self, symbol: str) -> dict[str, pd.DataFrame]:
-        """三张表 + 分红，AKShare（同花顺）。"""
+        """三张表，AKShare（同花顺）。"""
         dir_name = self._stock_dir(symbol)
         return self._ak.get_financials(symbol, dir_name=dir_name)
+
+    def get_dividends(self, symbol: str) -> pd.DataFrame:
+        """历史分红，AKShare。"""
+        dir_name = self._stock_dir(symbol)
+        return self._ak.get_dividends(symbol, dir_name=dir_name)
 
     def get_reports(self, symbol: str) -> list[dict]:
         """年报列表 + PDF/MD 下载，CNINFO。"""

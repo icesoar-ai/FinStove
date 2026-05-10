@@ -2,6 +2,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from src.data.gateway import DataGateway
 from src.data.storage import ParquetStorage
 from src.utils.ticker import parse_ticker
 
@@ -24,7 +25,7 @@ def financials(ticker: str, years: str):
     from src.utils.ticker import stock_dir
 
     s = ParquetStorage()
-    p = AKShareProvider(storage=s)
+    p = DataGateway()
     dir_name = stock_dir(symbol)
 
     console.print(f"[bold]Fetching financials for {dir_name}...[/bold]")
@@ -52,7 +53,7 @@ def financials(ticker: str, years: str):
 
     # 2. 详细三张表 (可能失败)
     try:
-        financials = p.get_financials(symbol, dir_name=dir_name)
+        financials = p.get_financials(symbol)
         if financials:
             for name, df in financials.items():
                 if df is not None and not df.empty:
@@ -63,7 +64,7 @@ def financials(ticker: str, years: str):
 
     # 3. 历史分红
     try:
-        dividends = p.get_dividends(symbol, dir_name=dir_name)
+        dividends = p.get_dividends(symbol)
         if not dividends.empty:
             latest = dividends.iloc[-1]
             recent_5 = dividends.tail(5)
