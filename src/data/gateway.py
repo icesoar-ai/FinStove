@@ -134,10 +134,9 @@ class DataGateway:
             # Fallback to yfinance if AKShare failed/empty
             if df is None or df.empty:
                 df = self._try(
-                    self._yf.get_daily, symbol, "cn", start_fmt, end_fmt
+                    self._yf.get_daily, symbol, "cn", start_fmt, end_fmt,
+                    store_symbol=dir_name
                 )
-                if df is not None and not df.empty:
-                    self._storage.merge_and_save(df, "stock", "cn", dir_name, "daily")
         else:
             if force:
                 df = self._try(
@@ -220,7 +219,6 @@ class DataGateway:
                 self._ak.get_intraday, symbol, period=ak_period, adjust="qfq"
             )
             if df is None or df.empty:
-                # yfinance intraday adds .SS/.SZ internally
                 df = self._try(
                     self._yf.get_intraday, symbol, "cn",
                     interval=interval, period="5d"

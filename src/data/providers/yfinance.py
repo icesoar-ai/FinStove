@@ -157,13 +157,17 @@ class YFinanceProvider:
     # ---- Stock OHLCV (with Parquet incremental) ----
 
     def get_daily(self, symbol: str, market: str = "us", start: str = "2010-01-01",
-                  end: Optional[str] = None) -> pd.DataFrame:
+                  end: Optional[str] = None,
+                  store_symbol: Optional[str] = None) -> pd.DataFrame:
+        """Fetch daily OHLCV. store_symbol overrides the Parquet directory name."""
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
 
-        existing = self._storage.load("stock", market, symbol, "daily")
+        store_sym = store_symbol or symbol
+
+        existing = self._storage.load("stock", market, store_sym, "daily")
         if not existing.empty:
-            _, last_date = self._storage.get_date_range("stock", market, symbol, "daily")
+            _, last_date = self._storage.get_date_range("stock", market, store_sym, "daily")
             if last_date:
                 start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
                 if start >= end:
@@ -177,7 +181,7 @@ class YFinanceProvider:
         if df is None or df.empty:
             return existing if not existing.empty else pd.DataFrame()
 
-        return self._storage.merge_and_save(df, "stock", market, symbol, "daily")
+        return self._storage.merge_and_save(df, "stock", market, store_sym, "daily")
 
     # ---- Info ----
 
