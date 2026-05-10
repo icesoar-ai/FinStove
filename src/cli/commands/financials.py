@@ -33,11 +33,16 @@ def financials(ticker: str, years: str):
                 df = result.get(name)
                 if df is not None and not df.empty:
                     df = df.reset_index()
-                    # Standardize column names for parquet
                     if isinstance(df.columns, pd.DatetimeIndex):
                         df.columns = [str(c.date()) for c in df.columns]
                     gw._storage.save(df, "stock", market.value, symbol, name)
-            console.print(f"[green]Saved: balance_sheet, income, cashflow[/green]")
+            # Dividends
+            div_df = gw.get_dividends(symbol, market)
+            if div_df is not None and not div_df.empty:
+                gw._storage.save(div_df, "stock", market.value, symbol, "dividends")
+                console.print(f"[green]Saved: balance_sheet, income, cashflow, dividends ({len(div_df)} records)[/green]")
+            else:
+                console.print(f"[green]Saved: balance_sheet, income, cashflow[/green]")
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")
         return

@@ -205,6 +205,21 @@ class YFinanceProvider:
         except Exception:
             return {}
 
+    def get_dividends(self, symbol: str, market: str = "us") -> pd.DataFrame:
+        """Fetch historical dividends as a DataFrame."""
+        yf_symbol = self._build_symbol(symbol, market, "stock")
+        ticker = self._yf.Ticker(yf_symbol)
+        try:
+            series = ticker.dividends
+            if series is None or series.empty:
+                return pd.DataFrame()
+            df = series.reset_index()
+            df.columns = ["date", "dividend"]
+            df["date"] = pd.to_datetime(df["date"]).dt.date
+            return df.sort_values("date").reset_index(drop=True)
+        except Exception:
+            return pd.DataFrame()
+
     # ---- Commodity / Forex / Crypto / Index (generic history) ----
 
     def get_generic(self, ticker: str, start: str = "2010-01-01",
