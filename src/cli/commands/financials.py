@@ -1,4 +1,5 @@
 import click
+import pandas as pd
 from rich.console import Console
 from rich.table import Table
 
@@ -18,14 +19,32 @@ def financials(ticker: str, years: str):
     数据源: AKShare (同花顺)，需先拉取数据: /fetch-stock <TICKER> financials
     """
     symbol, market = parse_ticker(ticker)
+    gw = DataGateway()
+
     if market.value != "cn":
-        console.print("[red]财报下载仅支持A股[/red]")
+        # US/HK: fetch via yfinance directly
+        console.print(f"[bold]Fetching financials for {symbol} (market={market.value})...[/bold]")
+        try:
+            result = gw.get_financials(symbol, market)
+            if not result:
+                console.print("[yellow]No financial data returned.[/yellow]")
+                return
+            for name in ["balance_sheet", "income", "cashflow"]:
+                df = result.get(name)
+                if df is not None and not df.empty:
+                    df = df.reset_index()
+                    # Standardize column names for parquet
+                    if isinstance(df.columns, pd.DatetimeIndex):
+                        df.columns = [str(c.date()) for c in df.columns]
+                    gw._storage.save(df, "stock", market.value, symbol, name)
+            console.print(f"[green]Saved: balance_sheet, income, cashflow[/green]")
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
         return
 
     from src.utils.ticker import stock_dir
 
     s = ParquetStorage()
-    p = DataGateway()
     dir_name = stock_dir(symbol)
 
     console.print(f"[bold]Fetching financials for {dir_name}...[/bold]")
@@ -33,7 +52,6 @@ def financials(ticker: str, years: str):
     # 1. 财务摘要 (可靠)
     try:
         import akshare as ak
-        import pandas as pd
         fin = ak.stock_financial_abstract_ths(symbol=symbol)
         fin["报告期_dt"] = pd.to_datetime(fin["报告期"])
         recent = fin[fin["报告期_dt"] >= "2021-01-01"].drop(columns=["报告期_dt"])
@@ -53,7 +71,7 @@ def financials(ticker: str, years: str):
 
     # 2. 详细三张表 (可能失败)
     try:
-        financials = p.get_financials(symbol)
+        financials = gw.get_financials(symbol)
         if financials:
             for name, df in financials.items():
                 if df is not None and not df.empty:
@@ -64,7 +82,7 @@ def financials(ticker: str, years: str):
 
     # 3. 历史分红
     try:
-        dividends = p.get_dividends(symbol)
+        dividends = gw.get_dividends(symbol)
         if not dividends.empty:
             latest = dividends.iloc[-1]
             recent_5 = dividends.tail(5)
