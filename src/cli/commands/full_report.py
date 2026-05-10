@@ -15,9 +15,8 @@ from src.analysis.capital_flow import CapitalFlowAnalyzer
 from src.analysis.correlation import CorrelationAnalyzer
 from src.analysis.policy import PolicyAnalyzer
 from src.data.base import Market
-from src.data.cache import DataCache
+from src.data.gateway import DataGateway
 from src.data.models import Ticker as TickerModel
-from src.data.registry import ProviderRegistry
 from src.integration.scorer import WeightedScorer
 from src.integration.aggregator import Aggregator
 from src.integration.report import ReportBuilder
@@ -39,8 +38,7 @@ def full_report(ticker: str, context: str, format: str):
     整合技术面/宏观/情绪/资金流/政策/估值/风险/基准/情景/年报文本分析。
     """
     symbol, market = parse_ticker(ticker)
-    cache = DataCache()
-    registry = ProviderRegistry(cache)
+    gw = DataGateway()
     dir_name = stock_dir(symbol) if market == Market.CN else symbol
 
     console.print(f"[bold blue]Full Report: {symbol} (market={market.value}, context={context})[/bold blue]")
@@ -48,10 +46,7 @@ def full_report(ticker: str, context: str, format: str):
     # Fetch price data
     end = date.today().strftime("%Y-%m-%d")
     try:
-        if market == Market.CN:
-            df = registry.akshare.get_daily(symbol, "20200101", end.replace("-", ""), dir_name=dir_name)
-        else:
-            df = registry.yfinance.get_daily(symbol, market.value, "2020-01-01", end)
+        df = gw.get_daily(symbol, market, start="2020-01-01", end=end)
         if df is None or df.empty:
             console.print("[red]No price data.[/red]")
             return
@@ -60,31 +55,20 @@ def full_report(ticker: str, context: str, format: str):
         console.print(f"[red]Price data error: {e}[/red]")
         return
 
-    # Fetch macro data for CN
+    # Fetch macro + financial + news data
     macro_data = {}
-    try:
-        cpi_df = registry.akshare.get_cpi()
-        if not cpi_df.empty and "今值" in cpi_df.columns:
-            macro_data.setdefault("cpi_yoy", {})["CN"] = float(cpi_df["今值"].dropna().iloc[-1])
-        pmi_df = registry.akshare.get_pmi()
-        if not pmi_df.empty and "今值" in pmi_df.columns:
-            macro_data.setdefault("pmi", {})["CN"] = float(pmi_df["今值"].dropna().iloc[-1])
-    except Exception:
-        pass
-
-    # Fetch financial data
     financials = {}
-    try:
-        financials = registry.akshare.get_financials(symbol, dir_name=dir_name)
-    except Exception:
-        pass
-
-    # Fetch news for sentiment analysis
     news_data = []
     try:
-        from src.data.providers.news import NewsProvider
-        np_ = NewsProvider(cache=cache)
-        news_data = np_.get_all_news(symbol, days=7)
+        macro_data = gw.get_macro()
+    except Exception:
+        pass
+    try:
+        financials = gw.get_financials(symbol)
+    except Exception:
+        pass
+    try:
+        news_data = gw.get_news(symbol, days=7)
         console.print(f"[dim]{len(news_data)} news items loaded[/dim]")
     except Exception:
         pass

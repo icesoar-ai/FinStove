@@ -4,8 +4,6 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.data.cache import DataCache
-from src.data.providers.news import NewsProvider
 from src.analysis.sentiment import _compute_sentiment
 from src.utils.ticker import parse_ticker
 
@@ -29,12 +27,11 @@ def sentiment(ticker: str, days: int):
     抓取个股新闻 + 宏观政策新闻，jieba分词 + 金融情感词典打分。
     """
     symbol, market = parse_ticker(ticker)
-    cache = DataCache()
-    np_ = NewsProvider(cache=cache)
+    gw = DataGateway()
 
     console.print(f"[bold]新闻情绪分析: {ticker} (近 {days} 天)[/bold]\n")
 
-    news_items = np_.get_all_news(symbol, days=days)
+    news_items = gw.get_news(symbol, days=days)
     if not news_items:
         console.print("[yellow]未获取到新闻数据[/yellow]")
         return

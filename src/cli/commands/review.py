@@ -5,8 +5,6 @@ from rich.console import Console
 from rich.table import Table
 
 from src.data.base import Market
-from src.data.cache import DataCache
-from src.data.registry import ProviderRegistry
 from src.track import load_records, review_ticker, compute_stats
 from src.utils.ticker import parse_ticker
 
@@ -28,14 +26,10 @@ def review(ticker: str):
         return
 
     # Fetch current price
-    cache = DataCache()
-    registry = ProviderRegistry(cache)
+    gw = DataGateway()
     current_price = 0.0
     try:
-        if market == Market.CN:
-            df = registry.akshare.get_daily(symbol, "20250101", date.today().strftime("%Y%m%d"))
-        else:
-            df = registry.yfinance.get_daily(symbol, market.value, "2025-01-01")
+        df = gw.get_daily(symbol, market)
         if df is not None and not df.empty:
             current_price = float(df["close"].iloc[-1])
     except Exception:

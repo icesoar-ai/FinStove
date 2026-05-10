@@ -7,7 +7,7 @@ from src.analysis.base import AnalysisContext
 from src.analysis.macro import MacroAnalyzer
 from src.data.base import Market as MktEnum
 from src.data.models import Ticker as TickerModel
-from src.data.macro_data import get_all_macro_data
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -25,7 +25,7 @@ def macro_check(country: str):
     console.print(f"[bold blue]Macro Check: {', '.join(countries)}[/bold blue]")
 
     # Fetch all macro data from CN + US sources
-    macro_data = get_all_macro_data()
+    macro_data = DataGateway().get_macro()
 
     if not macro_data or all(not v for v in macro_data.values()):
         console.print("[red]No macro data available.[/red]")

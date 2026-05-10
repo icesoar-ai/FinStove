@@ -2,7 +2,6 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.data.providers.cninfo import CNINFOProvider
 from src.utils.ticker import parse_ticker, stock_dir
 
 console = Console()
@@ -25,11 +24,11 @@ def reports(ticker: str, years: str):
     if years:
         year_list = [int(y.strip()) for y in years.split(",") if y.strip()]
 
-    provider = CNINFOProvider()
+    gw = DataGateway()
     scope = f"({years})" if year_list else "(全部可用)"
     console.print(f"[bold]Fetching annual reports for {symbol} {scope}...[/bold]")
 
-    results = provider.download_reports(symbol, years=year_list)
+    results = gw.get_reports(symbol)
 
     if not results:
         console.print("[yellow]未找到年报[/yellow]")

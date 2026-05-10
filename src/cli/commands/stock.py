@@ -5,14 +5,12 @@ from rich.table import Table
 
 from src.analysis.base import AnalysisContext
 from src.analysis.technical import TechnicalAnalyzer
-from src.data.cache import DataCache
-from src.data.registry import ProviderRegistry
+from src.data.gateway import DataGateway
 from src.data.base import Market
 from src.data.models import Ticker as TickerModel
 from src.utils.ticker import parse_ticker
 
 console = Console()
-
 
 @click.command()
 @click.argument("ticker")
@@ -29,19 +27,18 @@ def analyze_stock(ticker: str, start: str, end: str, market: str):
     end = end or date.today().strftime("%Y-%m-%d")
     symbol, mkt = parse_ticker(ticker)
 
-    cache = DataCache()
-    registry = ProviderRegistry(cache)
+    gw = DataGateway()
 
     console.print(f"[bold blue]Analyzing {symbol} (market={mkt.value})[/bold blue]")
 
     # Fetch price data
     try:
         if mkt == Market.CN:
-            start_fmt = start.replace("-", "") if "-" in start else start
-            end_fmt = end.replace("-", "") if "-" in end else end
-            df = registry.akshare.get_daily(symbol, start_fmt, end_fmt)
+            start_fmt = gw._normalize_date(start) if "-" in start else start
+            end_fmt = gw._normalize_date(end) if "-" in end else end
+            df = gw.get_daily(symbol, start_fmt, end_fmt)
         else:
-            df = registry.yfinance.get_daily(symbol, mkt.value, start, end)
+            df = gw.get_daily(symbol, mkt.value, start, end)
 
         if df is None or df.empty:
             console.print("[red]No price data available.[/red]")
@@ -62,7 +59,6 @@ def analyze_stock(ticker: str, start: str, end: str, market: str):
 
     # Display
     _display_result(result, symbol)
-
 
 def _display_result(result, symbol: str):
     color = "green" if result.score > 0.3 else ("red" if result.score < -0.3 else "yellow")

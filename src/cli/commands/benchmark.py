@@ -5,11 +5,9 @@ from rich.table import Table
 
 from src.analysis.base import AnalysisContext
 from src.analysis.benchmark import BenchmarkAnalyzer
-from src.data.cache import DataCache
-from src.data.registry import ProviderRegistry
+from src.data.gateway import DataGateway
 from src.data.base import Market
 from src.data.models import Ticker as TickerModel
-from src.data.storage import ParquetStorage
 from src.data.macro_data import get_all_macro_data
 from src.utils.ticker import parse_ticker
 
@@ -25,7 +23,6 @@ BENCHMARK_MAP = {
     Market.DE: ("de", "DAX", "DAX 40"),
     Market.FR: ("fr", "CAC", "CAC 40"),
 }
-
 
 def _get_benchmark_return(mkt: Market) -> float | None:
     """Get 1-year benchmark index return from Parquet storage."""
@@ -46,7 +43,6 @@ def _get_benchmark_return(mkt: Market) -> float | None:
         pass
     return None
 
-
 @click.command()
 @click.argument("ticker")
 @click.option("--start", default="2022-01-01", help="分析起始日期")
@@ -63,8 +59,7 @@ def benchmark(ticker: str, start: str, end: str, market: str):
     end = end or date.today().strftime("%Y-%m-%d")
     symbol, mkt = parse_ticker(ticker)
 
-    cache = DataCache()
-    registry = ProviderRegistry(cache)
+    gw = DataGateway()
 
     bench_info = BENCHMARK_MAP.get(mkt, (None, None, "未知"))
     bench_name = bench_info[2]
@@ -73,11 +68,11 @@ def benchmark(ticker: str, start: str, end: str, market: str):
     # Fetch stock price data
     try:
         if mkt == Market.CN:
-            start_fmt = start.replace("-", "") if "-" in start else start
-            end_fmt = end.replace("-", "") if "-" in end else end
-            df = registry.akshare.get_daily(symbol, start_fmt, end_fmt)
+            start_fmt = gw._normalize_date(start) if "-" in start else start
+            end_fmt = gw._normalize_date(end) if "-" in end else end
+            df = gw.get_daily(symbol, start_fmt, end_fmt)
         else:
-            df = registry.yfinance.get_daily(symbol, mkt.value, start, end)
+            df = gw.get_daily(symbol, mkt.value, start, end)
 
         if df is None or df.empty:
             console.print("[red]No price data available.[/red]")

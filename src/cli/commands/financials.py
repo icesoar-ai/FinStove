@@ -3,7 +3,6 @@ from rich.console import Console
 from rich.table import Table
 
 from src.data.storage import ParquetStorage
-from src.data.providers.akshare import AKShareProvider
 from src.utils.ticker import parse_ticker
 
 console = Console()

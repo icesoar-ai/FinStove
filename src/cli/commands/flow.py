@@ -4,7 +4,6 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.data.cache import DataCache
 from src.data.storage import ParquetStorage
 
 console = Console()
@@ -18,12 +17,11 @@ def flow_data(start: str, end: str):
 
     数据源: AKShare (东方财富)，持久化到 data/flow/cn/
     """
-    from src.data.providers.akshare import AKShareProvider
-
+    
     end = end or date.today().strftime("%Y-%m-%d")
-    cache = DataCache()
     storage = ParquetStorage()
-    ak = AKShareProvider(cache=cache, storage=storage)
+    gw = DataGateway()
+    flow_data = gw.get_flow()
 
     for direction, label, fetch_fn in [
         ("northbound", "北向资金 (沪股通+深股通→A股)", ak.get_northbound),
