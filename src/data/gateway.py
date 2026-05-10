@@ -23,10 +23,12 @@ from .storage import ParquetStorage
 # Providers
 from .providers.akshare import AKShareProvider
 from .providers.yfinance import YFinanceProvider
+from .providers.baostock import BaostockProvider
 from .providers.fred import FREDProvider
 from .providers.cninfo import CNINFOProvider
 from .providers.coingecko import CoinGeckoProvider
 from .providers.news import NewsProvider
+from .providers.edgar import SECEDGARProvider
 
 
 class DataGateway:
@@ -37,8 +39,10 @@ class DataGateway:
         self._storage = storage or ParquetStorage()
         self._ak = AKShareProvider(cache=self._cache, storage=self._storage)
         self._yf = YFinanceProvider(cache=self._cache, storage=self._storage)
+        self._bs = BaostockProvider(cache=self._cache, storage=self._storage)
         self._fred = FREDProvider(cache=self._cache, storage=self._storage)
         self._cninfo = CNINFOProvider(storage=self._storage)
+        self._edgar = SECEDGARProvider()
         self._cg = CoinGeckoProvider(cache=self._cache)
         self._news = NewsProvider(cache=self._cache)
 
@@ -131,10 +135,15 @@ class DataGateway:
                     self._ak.get_daily, symbol, start, end,
                     dir_name=dir_name,
                 )
-            # Fallback to yfinance if AKShare failed/empty
+            # Fallback chain: AKShare → yfinance → Baostock
             if df is None or df.empty:
                 df = self._try(
                     self._yf.get_daily, symbol, "cn", start_fmt, end_fmt,
+                    store_symbol=dir_name
+                )
+            if df is None or df.empty:
+                df = self._try(
+                    self._bs.get_daily, symbol, start, end,
                     store_symbol=dir_name
                 )
         else:
@@ -270,9 +279,15 @@ class DataGateway:
         result = self._try(self._yf.get_dividends, symbol, market.value)
         return result if result is not None else pd.DataFrame()
 
-    def get_reports(self, symbol: str) -> list[dict]:
-        """年报列表 + PDF/MD 下载，CNINFO。"""
-        return self._cninfo.download_reports(symbol)
+    def get_reports(self, symbol: str, market: Market = Market.CN) -> list[dict]:
+        """年报下载。
+
+        A股: CNINFO (PDF+MD)。
+        美股: SEC EDGAR (10-K 文本)。
+        """
+        if market == Market.CN:
+            return self._cninfo.download_reports(symbol)
+        return self._edgar.download_10k(symbol)
 
     # ── 宏观 ─────────────────────────────────────────
 
