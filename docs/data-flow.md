@@ -66,7 +66,7 @@ CLI fetch 命令
                → 返回 DataFrame
 ```
 
-## 降级路径 (A股专属)
+## 降级路径 (A股专属 — 三级链)
 
 ```
 gw.get_daily("603650", Market.CN)
@@ -74,9 +74,11 @@ gw.get_daily("603650", Market.CN)
       ├─ 成功 → 返回
       └─ 异常/空
            → YFinanceProvider.get_daily("603650", "cn", store_symbol="603650_彤程新材")
-                → _build_symbol("603650", "cn") → "603650.SS"
-                → yfinance API
-                → Parquet.merge_and_save(→ data/stock/cn/603650_彤程新材/daily.parquet)
+                ├─ 成功 → 返回
+                └─ 异常/空
+                     → BaostockProvider.get_daily("603650", store_symbol="603650_彤程新材")
+                          → baostock API (免费免注册)
+                          → Parquet.merge_and_save(→ .../603650_彤程新材/daily.parquet)
 ```
 
 ## 各组件职责
@@ -90,6 +92,8 @@ gw.get_daily("603650", Market.CN)
 | **FREDProvider** | `src/data/providers/fred.py` | 美国宏观 (需 API Key) |
 | **CoinGeckoProvider** | `src/data/providers/coingecko.py` | 加密货币行情 |
 | **CNINFOProvider** | `src/data/providers/cninfo.py` | A股年报 PDF/MD |
+| **SECEDGARProvider** | `src/data/providers/edgar.py` | 美股 10-K 年报 (SEC EDGAR) |
+| **BaostockProvider** | `src/data/providers/baostock.py` | A股日线，免费免注册，第三降级 |
 | **NewsProvider** | `src/data/providers/news.py` | 新闻 (东方财富 + CCTV) |
 | **DataCache** | `src/data/cache.py` | API 请求缓存，TTL 控制，存 ~/.cache/stocks/ |
 | **ParquetStorage** | `src/data/storage.py` | 数据持久化，增量合并，存 data/*.parquet |

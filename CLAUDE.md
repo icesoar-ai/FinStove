@@ -104,7 +104,9 @@ python -m src.cli.main summary                     # 每日数据更新汇总
 |----|------|------|
 | 数据 | AKShare (A股日线/指数/15+宏观指标/三张表 via 同花顺) | 可用 |
 | 数据 | YFinance (全球股票/商品/外汇/指数/加密货币) | 可用 (受速率限制) |
+| 数据 | Baostock (A股日线，免费免注册，第三降级) | 可用 |
 | 数据 | CNINFO (年报PDF+MD) | 可用 |
+| 数据 | SEC EDGAR (美股 10-K 年报) | 可用 |
 | 数据 | 实时行情 (YFinance 概览 + AKShare 个股) | 可用 |
 | 数据 | 盘中分钟K线 (AKShare → yfinance 自动降级) | 可用 |
 | 数据 | 新闻抓取 (AKShare 东方财富 + CCTV) | 可用 |

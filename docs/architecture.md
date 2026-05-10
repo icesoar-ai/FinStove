@@ -56,8 +56,8 @@
 
 ### Data Layer (`src/data/`)
 
-**DataGateway**: 统一数据网关 (`gateway.py`)，CLI 唯一入口。持有 6 个 Provider，内置降级策略 (A股 AKShare → yfinance)，统一 Parquet/SQLite 读写路径，聚合宏观数据。
-**Provider 适配器**: akshare(CN), yfinance(global), fred(US macro), coingecko(crypto), cninfo(年报), news(东方财富+CCTV)
+**DataGateway**: 统一数据网关 (`gateway.py`)，CLI 唯一入口。持有 8 个 Provider，内置 A股三级降级链 (AKShare → yfinance → Baostock)，统一 Parquet/SQLite 读写路径，聚合宏观数据。
+**Provider 适配器**: akshare(CN) + baostock(A股第三降级), yfinance(global), fred(US macro), coingecko(crypto), cninfo(A股年报), sec-edgar(美股10-K), news(东方财富+CCTV)
 **标准化**: 所有数据通过 normalizer 统一
 
 **存储方案：Parquet（原始数据）+ SQLite（API 请求缓存）两层架构**
@@ -331,6 +331,7 @@ diskcache (SQLite缓存)
 | — | Phase 3 CLI/Skills 收尾: correlation-check, risk-check, benchmark, scenario, market-scan | ✓ 2026-05-09 |
 | — | CLI 重组: fetch 组 (9) + live 组 (2) + 顶层 (13) | ✓ 2026-05-09 |
 | — | DataGateway: 统一数据网关 (降级/缓存/PQ读写/macro聚合) | ✓ 2026-05-10 |
+| — | Baostock + SEC EDGAR: A股三级降级链 + 美股 10-K 年报 | ✓ 2026-05-10 |
 
 ### 待完成
 
