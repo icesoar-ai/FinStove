@@ -200,7 +200,7 @@ diskcache (SQLite缓存)
 | A股幸存者偏差 (退市股) | 未处理 |
 | 前视偏差 (财报发布日期 vs 截止日) | 未检测 |
 | 复权数据校验 | 未实现 |
-| API 限速自动退避/重试 | 无机制 |
+| API 限速自动退避/重试 | 已实现 (`src/data/rate_limiter.py`, `config/providers.yaml`) |
 | 分析模块并行化 | 未实现 |
 
 ### 输出

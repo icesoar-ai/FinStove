@@ -14,9 +14,14 @@
 │                      (src/data/gateway.py)                              │
 │                                                                         │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────────┐  │
-│  │ _read_or_   │  │ _force_fetch │  │ _try() — 统一异常捕获           │  │
-│  │ fetch()     │  │              │  │   AKShare → yfinance 降级       │  │
-│  └─────────────┘  └──────────────┘  └────────────────────────────────┘  │
+│  │ _read_or_   │  │ _force_fetch │  │ _try() — 限速 + 退避 + 异常捕获 │  │
+│  │ fetch()     │  │              │  │   降级: AK→YF→BS / YF→CG        │  │
+│  └─────────────┘  └──────────────┘  └────────────┬───────────────────┘  │
+│                                                   │                      │
+│  ┌──────────────────────────┐                     │                      │
+│  │      RateLimiter          │ ◄──────────────────┘                      │
+│  │  (src/data/rate_limiter.py)│  读 config/providers.yaml                │
+│  └──────────────────────────┘                                            │
 └────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬───────────────────┘
      │      │      │      │      │      │      │      │
      ▼      ▼      ▼      ▼      ▼      ▼      ▼      ▼
@@ -260,5 +265,6 @@ API 请求 → DataCache (去重) → ParquetStorage (持久化)
 | SECEDGARProvider | `src/data/providers/edgar.py` | 美股 10-K 年报 |
 | BaostockProvider | `src/data/providers/baostock.py` | A股日线，三级降级 |
 | NewsProvider | `src/data/providers/news.py` | 新闻抓取 |
+| RateLimiter | `src/data/rate_limiter.py` | 每 Provider 限速/退避/冷却 |
 | DataCache | `src/data/cache.py` | API 请求缓存，TTL 控制 |
 | ParquetStorage | `src/data/storage.py` | 数据持久化，增量合并 |
