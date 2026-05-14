@@ -4,7 +4,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -19,13 +19,11 @@ def flow_data(start: str, end: str):
     """
     
     end = end or date.today().strftime("%Y-%m-%d")
-    storage = ParquetStorage()
     gw = DataGateway()
-    flow_data = gw.get_flow()
 
     for direction, label, fetch_fn in [
-        ("northbound", "北向资金 (沪股通+深股通→A股)", ak.get_northbound),
-        ("southbound", "南向资金 (港股通→港股)", ak.get_southbound),
+        ("northbound", "北向资金 (沪股通+深股通→A股)", gw._ak.get_northbound),
+        ("southbound", "南向资金 (港股通→港股)", gw._ak.get_southbound),
     ]:
         console.print(f"[bold]Fetching {label}[/bold]")
 
