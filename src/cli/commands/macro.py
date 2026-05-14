@@ -89,13 +89,16 @@ def _print_data_summary(md: dict):
         shibor = md["shibor"]
         console.print(f"  CN SHIBOR: ON={shibor.get('ON', 'N/A'):.2f}%, 1Y={shibor.get('1Y', 'N/A'):.2f}%")
     # --- 景气 ---
-    if md.get("pmi"):
-        for c, v in md["pmi"].items():
-            console.print(f"  {c} PMI: {v:.1f}")
-    if md.get("pmi_caixin"):
-        console.print(f"  CN 财新制造业PMI: {md['pmi_caixin']:.1f}")
-    if md.get("pmi_non_man"):
-        console.print(f"  CN 非制造业PMI: {md['pmi_non_man']:.1f}")
+    if md.get("pmi") is not None:
+        if isinstance(md["pmi"], dict):
+            if "CN" in md["pmi"]:
+                console.print(f"  CN PMI: {md['pmi']['CN']:.1f}")
+            if "US" in md["pmi"]:
+                console.print(f"  US PMI: {md['pmi']['US']:.1f}")
+    if md.get("caixin_pmi") is not None:
+        console.print(f"  CN 财新制造业PMI: {md['caixin_pmi']:.1f}")
+    if md.get("non_man_pmi") is not None:
+        console.print(f"  CN 非制造业PMI: {md['non_man_pmi']:.1f}")
     # --- 货币信贷 ---
     if md.get("m2_growth"):
         console.print(f"  CN M2 同比：{md['m2_growth']:.1f}%")
@@ -117,7 +120,7 @@ def _print_data_summary(md: dict):
     # --- 收益率曲线 ---
     if md.get("yield_curve"):
         for c, curve in md["yield_curve"].items():
-            if not curve:
+            if not curve or not isinstance(curve, dict):
                 continue
             # Try to find long/short keys in both US (10Y/2Y) and CN (10年/1年) format
             keys = list(curve.keys())

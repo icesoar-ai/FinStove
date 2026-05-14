@@ -337,7 +337,8 @@ class DataGateway:
 
         # Extract scalar values from DataFrames
         for key in ["cpi_yoy", "ppi_yoy", "gdp", "fx_reserves", "unemployment",
-                    "exports_yoy", "imports_yoy", "industrial_production"]:
+                    "exports_yoy", "imports_yoy", "industrial_production",
+                    "caixin_pmi", "non_man_pmi"]:
             if key in result and isinstance(result[key], pd.DataFrame):
                 df = result[key]
                 col = "今值"
@@ -390,6 +391,16 @@ class DataGateway:
                         result["retail_sales_growth"] = float(v)
                         break
             del result["retail_sales"]
+
+        # PMI → dict
+        if "pmi" in result and isinstance(result["pmi"], pd.DataFrame):
+            col = "今值"
+            if col in result["pmi"].columns:
+                vals = [float(x) for x in reversed(result["pmi"][col].tolist()) if pd.notna(x)]
+                if vals:
+                    result["pmi"] = {"CN": vals[0]}
+            else:
+                result["pmi"] = {}
 
         # Bond yield curve
         if "bond_yield" in result and isinstance(result["bond_yield"], pd.DataFrame):
