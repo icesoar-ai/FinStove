@@ -121,13 +121,3 @@ data/
 | 000300 / 000905 | 沪深300 / 中证500 | index/cn |
 | USDCNY / DXY | 美元人民币 / 美元指数 | forex |
 | BTC / ETH | 比特币 / 以太坊 | crypto |
-
-## 数据来源
-
-| 类别 | 来源 | 说明 |
-|------|------|------|
-| A股日线/指数 | akshare | 东方财富接口 |
-| A股财报 | akshare (同花顺) | stock_financial_*_ths |
-| 全球品种 | yfinance | 美股/商品/外汇/加密货币/美指 |
-| 美债收益率 | FRED | 需 FRED_API_KEY |
-| 资金流向 | akshare | 沪深港通 |

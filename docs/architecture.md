@@ -1,4 +1,4 @@
-# 金融分析助手 - 架构与实施计划
+# 金融分析助手 - 架构
 
 ## Context
 
@@ -52,63 +52,37 @@
 ├── ...             ──┘
 ```
 
+## 项目结构
+
+```
+src/data/           # 数据层 (gateway → providers: akshare/yfinance/cninfo/fred/coingecko/news → cache → parquet)
+src/analysis/       # 分析模块 (11个维度)
+  fundamental/      # 估值子模块 (10个方法 + 聚合器)
+src/integration/    # 集成层 (scorer → aggregator → report)
+src/track/          # 判断跟踪 (record → review → stats)
+src/cli/            # CLI 入口 (Click)
+config/             # 配置文件 (主观策略层)
+data/               # 原始数据 (Parquet, PDF, MD) — gitignored
+.claude/skills/     # Claude Code Skills
+docs/               # 文档
+```
+
 ## 分层设计
 
 ### Data Layer (`src/data/`)
 
-**DataGateway**: 统一数据网关 (`gateway.py`)，CLI 唯一入口。持有 8 个 Provider，内置 A股三级降级链 (AKShare → yfinance → Baostock)，统一 Parquet/SQLite 读写路径，聚合宏观数据。
-**Provider 适配器**: akshare(CN) + baostock(A股第三降级), yfinance(global), fred(US macro), coingecko(crypto), cninfo(A股年报), sec-edgar(美股10-K), news(东方财富+CCTV)
-**标准化**: 所有数据通过 normalizer 统一
+DataGateway (`gateway.py`) 为 CLI 唯一入口，持有 8 个 Provider，内置 A股三级降级链 (AKShare → yfinance → Baostock)，统一 Parquet/SQLite 读写路径，聚合宏观数据。
 
-**存储方案：Parquet（原始数据）+ SQLite（API 请求缓存）两层架构**
+存储方案：Parquet（原始数据）+ SQLite（API 请求缓存）两层架构。Parquet 是真正的数据源，SQLite 只是 API 去重缓存。
 
-Parquet 是真正的数据源（`src/data/storage.py`），SQLite 只是 API 去重缓存（`src/data/cache.py`）。
-
-**Parquet 存储路径规则：** `data/{asset_type}/{market}/{symbol}/{data_type}.parquet`。完整目录结构和品种码表见 `docs/data-structure.md`。
-
-**数据获取流程：**
-
-```
-请求 fetch 600519.SH
-        │
-        ▼
-  Parquet 有数据？
-   ┌─────┴─────┐
-  是           否
-   │            │
-   ▼            ▼
-查到最新日期   全量请求 API
-   │            │
-   │            ▼
-   │        _cached() 先查 SQLite
-   │         ┌──命中：直接返回
-   │         └──未命中：调 AKShare API
-   │                    │
-   ▼                    ▼
-只请求 [last+1, today]  合并去重 → 写 Parquet + 写 SQLite
-   │
-   ▼
-合并新数据 → 写回 Parquet
-返回合并后的完整数据
-```
-
-**三种缓存状态下的行为：**
-
-| Parquet | SQLite | 行为 |
-|---------|--------|------|
-| 有，到昨天 | 有 | 只拉 1 天 → 合并写 Parquet (几乎无 API 调用) |
-| 有，到昨天 | 空 (被清) | 只拉昨天到今天 ≈2天 → 写 Parquet + 重建缓存 |
-| 无 | 无 | 全量拉取 → 写 Parquet + 缓存 |
-
-SQLite 丢了不影响数据完整性，只会多一两次 API 请求。
-
-详见 `docs/data-structure.md` — 完整的目录树、命名规则、品种码表和数据来源。
+详见：`docs/data-flow.md`（数据流与 Provider 详情）、`docs/data-structure.md`（存储目录结构）。
 
 ### Analysis Layer (`src/analysis/`)
+
 每个模块继承 AbstractAnalyzer，输入 AnalysisContext，输出 AnalysisResult (score: -2~+2, confidence, signals, summary):
 
-| 模块 | 功能 | 免费数据源 |
-|------|------|-----------|
+| 模块 | 功能 | 数据源 |
+|------|------|--------|
 | macro | 利率/收益率曲线/CPI/PPI/PMI(官方+财新+非制造业)/GDP/DXY/M2/社融/进出口/就业/工业 | FRED + AKShare |
 | capital_flow | 沪深港通/机构/板块轮动/跨资产 | AKShare + yfinance |
 | technical | 多时间框架(日/周/月)趋势/动量/成交量/支撑阻力/形态 | yfinance/AKShare OHLCV |
@@ -116,134 +90,70 @@ SQLite 丢了不影响数据完整性，只会多一两次 API 请求。
 | risk | 尾部风险/集中度/相关性崩盘/流动性/最大回撤 | yfinance + FRED |
 | benchmark | 行业排名/指数超额收益(β vs α)/无风险资产对比 | yfinance + AKShare |
 | scenario | 乐观/中性/悲观目标价区间 + 压力测试 | 依赖其他模块输出 |
-| sentiment | 新闻NLP/恐惧贪婪/VIX/论坛情绪 | RSS + jieba + VADER |
+| sentiment | 新闻NLP/恐惧贪婪/VIX/论坛情绪 | jieba + VADER |
 | policy | 央行方向/财政/监管/地缘(基于关键词规则) | 新闻 + FRED |
 | correlation | 商品-货币/债券-股票/避险流/risk-on-off | yfinance + FRED |
+| report_text | 年报文本分析 (审计意见/指标提取/风险/展望) | CNINFO + SEC EDGAR |
 
 ### Fundamental Analysis 子模块 (`src/analysis/fundamental/`)
 
-基本面的核心是估值。每个方法实现一个 `ValuationMethod` ABC，输出标准化的 `ValuationResult(value_range_low, value_range_high, fair_value, confidence, assumptions)`，此聚合器汇总所有方法取中位数/加权平均并做一致性判断。
-
-```
-src/analysis/fundamental/
-├── __init__.py           # 调度器，跑全部估值方法
-├── base.py               # ValuationMethod ABC, ValuationResult
-├── fcff.py               # FCFF: 企业自由现金流折现，折现率 WACC，得企业价值减净负债
-├── fcfe.py               # FCFE: 股权自由现金流折现，折现率 COE，直接得股权价值
-├── ddm.py                # 股利折现: Gordon Growth + 多阶段 DDM
-├── graham.py             # Graham Number + Graham Revised Formula
-├── epv.py                # EPV (Greenwald): 可持续盈利折现 + 冗余资产
-├── ncav.py               # Net-Net / NCAV: 流动资产 - 总负债，Graham 清算法
-├── residual_income.py    # 剩余收益模型 (Ohlson): BV + ∑(RI/(1+r)^t)
-├── multiples.py          # 相对估值: PE/PB/PS/EV_EBITDA/PEG/FCF_Yield/EV_FCF 分位 vs 历史 vs 行业
-├── fcf_quality.py        # FCF 质量: FCF Yield, FCF Margin, FCF Conversion (FCF/NP), EV/FCF
-├── health.py             # 财务健康: Altman Z, 流动/速动比率, 负债率趋势, ROE DuPont
-└── aggregator.py         # 多方法汇总: 中位数、加权平均、一致性（方法间分歧大 → warning）
-```
-
-**覆盖的估值方法清单：**
+每个方法实现 `ValuationMethod` ABC，输出 `ValuationResult`，聚合器汇总取中位数/加权平均并做一致性判断。
 
 | 分类 | 方法 | 说明 |
 |------|------|------|
-| DCF | **FCFF** | 企业自由现金流折现，WACC 折现率 |
-| DCF | **FCFE** | 股权自由现金流折现，COE 折现率 |
-| DCF | **Monte Carlo DCF** | 对关键假设做概率分布采样（Phase 5） |
-| 股利 | **DDM** | Gordon Growth + 多阶段 |
-| 价值 | **Graham Number** | √(22.5 × EPS × BVPS) |
-| 价值 | **Graham Formula** | V = EPS × (8.5 + 2g) × 4.4/Y |
-| 资产 | **EPV** | Greenwald 盈利能量价值 |
-| 资产 | **NCAV / Net-Net** | Graham 清算价值 |
-| 剩余 | **Residual Income** | Ohlson 模型 |
-| 相对 | **PE/PB/PS 分位** | 当前 vs 历史 vs 行业 |
-| 相对 | **EV/EBITDA** | 跨资本结构可比 |
-| 相对 | **PEG** | 成长性调整 PE |
-| 相对 | **FCF Yield / EV/FCF** | 更干净的现金流倍数 |
-| 质量 | **FCF Margin / Conversion** | 盈利质量辅助 |
-| 健康 | **Altman Z / DuPont** | 财务风险评分 |
+| DCF | FCFF | 企业自由现金流折现，WACC 折现率 |
+| DCF | FCFE | 股权自由现金流折现，COE 折现率 |
+| 股利 | DDM | Gordon Growth + 多阶段 |
+| 价值 | Graham Number + Graham Formula | √(22.5×EPS×BVPS) / V=EPS×(8.5+2g)×4.4/Y |
+| 资产 | EPV | Greenwald 盈利能量价值 |
+| 资产 | NCAV / Net-Net | Graham 清算价值 |
+| 剩余收益 | Residual Income | Ohlson 模型 |
+| 相对 | PE/PB/PS/EV_EBITDA/PEG/FCF_Yield | 当前 vs 历史分位 |
+| 质量 | FCF Quality | FCF Yield, FCF Margin, FCF Conversion |
+| 健康 | Altman Z + DuPont | 财务风险评分 |
 
 ### Risk Analysis (`src/analysis/risk.py`)
 
-不只判断"会不会涨"，还要量化"可能跌多少"：
-
-| 风险维度 | 指标 | 计算方式 |
-|---------|------|---------|
-| **尾部风险** | 历史 VaR / CVaR | 在类似宏观+技术条件下，最差 5%/1% 情景的回撤 |
-| **集中度风险** | HHI 指数 | 持仓的行业/因子/市值暴露集中度 |
-| **相关性崩盘** | 相关矩阵 + 压力测试 | 熊市里资产相关性趋近于 1，分散失效 |
-| **流动性风险** | Amihud 非流动性指标 | 成交额弹性，跌停板概率（A股特有） |
-| **波动率曲面** | 历史波动率 + GARCH | 波动率聚集效应 |
-| **最大回撤** | Max Drawdown | 历史上类似条件下多深多长 |
+| 风险维度 | 指标 |
+|---------|------|
+| 尾部风险 | 历史 VaR / CVaR |
+| 集中度风险 | HHI 指数 |
+| 相关性崩盘 | 相关矩阵 + 压力测试 |
+| 流动性风险 | Amihud 非流动性指标 |
+| 波动率 | 历史波动率 + GARCH |
+| 最大回撤 | Max Drawdown |
 
 ### Benchmark Comparison (`src/analysis/benchmark.py`)
 
-分析报告不为孤立的"好"做背书，必须可比较：
-
 | 对比维度 | 说明 |
 |---------|------|
-| **行业排名** | PE/ROE/FCF Margin/ROIC 在同行业 GICS 分类中的分位数 |
-| **指数超额收益归因** | 相对于沪深300/标普500，超额来源是 β（市场暴露）还是 α（选股能力） |
-| **无风险资产对比** | 相对于持有国债（如中国 10 年期 ~2.5%、美国 ~4%），多获了多少超额收益，多承担了多少风险 |
-| **同类替代** | 如果买同行业的 ETF（费用率更低、分散更好），是否更优 |
+| 行业排名 | PE/ROE/FCF Margin/ROIC 同行业分位数 |
+| 超额收益归因 | β（市场暴露） vs α（选股能力）|
+| 无风险对比 | vs 国债的超额收益与风险 |
+| 同类替代 | vs 同行业 ETF |
 
 ### Scenario Analysis (`src/analysis/scenario.py`)
 
-单点目标价是幻觉，区间判断才是诚实分析：
-
-| 情景 | 方法 | 输出 |
-|------|------|------|
-| **乐观/中性/悲观** | 关键假设变量（收入增速 ±σ、折现率 ±σ、PE 终值敏感度） | 三档目标价区间 |
-| **压力测试** | 历史极端事件重现（2008 金融危机、2015 A股股灾、2020 新冠） | 最大回撤估计、恢复期预估 |
-| **泰勒展开** | 每个分析维度的"如果...会怎样"：利率上调 1% → 目标价下降 x% | 敏感性表格 |
-| **反转情景** | 当前最拥挤的做多/做空方向的反转演练 | 反向风险提示 |
+| 情景 | 方法 |
+|------|------|
+| 乐观/中性/悲观 | 关键假设变量 ±σ，三档目标价区间 |
+| 压力测试 | 历史极端事件重现 |
+| 敏感性 | "如果...会怎样" 泰勒展开 |
+| 反转情景 | 最拥挤方向的反转演练 |
 
 ### Judgment Tracking (`src/track/`)
 
-系统每次输出的判断持久化，定期回溯对错，形成反馈闭环：
-
-```
-src/track/
-├── __init__.py
-├── record.py           # 每次分析结果入库
-├── review.py           # 定期回测：N 天/周/月后看结果
-├── stats.py            # 统计：胜率、偏差度、马后炮检测
-└── models.py           # TrackRecord, ReviewResult
-```
-
-- 每次 `/analyze-stock` 或 `/full-report` 自动存一条记录
-- 定期回测命令 `stocks-cli review <TICKER>` 对比历史判断和实际走势
-- 胜率统计按维度拆开（技术面胜率？基本面胜率？），暴露每个维度的信息价值
+每次分析结果持久化，定期回溯对错，形成反馈闭环。胜率统计按维度拆开，暴露每个维度的信息价值。
 
 ### Integration Layer (`src/integration/`)
-- **Scorer**: 加权打分，权重按场景(`scoring.yaml`)：长期投资(基本面0.4+宏观0.2)、短期交易(技术0.35+资金0.25)、宏观评估
+
+- **Scorer**: 加权打分，权重按场景(`scoring.yaml`)
 - **Aggregator**: 汇总内在价值判断、价格合理性、趋势预测、风险因素
-- **Report**: Jinja2 模板 → markdown，三档(brief ~20行/standard ~60行/full ~200行)
+- **Report**: Jinja2 模板 → markdown，三档 (brief/standard/full)
 
-### CLI (`src/cli/`)
-Click + Rich，分三组:
+## CLI 与 Skills
 
-**数据抓取 (`fetch`):** ohlcv / index / commodity / forex / crypto / flow / yield-curve / financials / reports
-**实时行情 (`live`):** spot / intraday
-**分析与工具:** analyze-stock / macro-check / valuation / full-report / sentiment / report-analyze / correlation-check / risk-check / benchmark / scenario / review / market-scan / summary
-- `stocks-cli review <TICKER>` — 回顾历史判断
-
-### Skills (`.claude/skills/`)
-Skill 只做编排（调 Python CLI），不含分析逻辑：
-- `/fetch-stock` — 数据抓取 (ohlcv + financials + reports，可组合)
-- `/analyze-stock` — 技术分析
-- `/fetch-index [MARKET] [CODE]` — 全球指数 (CN/US/HK/JP/UK/DE/FR)
-- `/fetch-flow` — 资金流向
-- `/fetch-commodity [CODE]` — 大宗商品
-- `/fetch-forex [PAIR]` — 外汇汇率
-- `/fetch-crypto [SYMBOL]` — 加密货币
-- `/fetch-yield-curve` — 美债收益率曲线
-- `/macro-check` — 宏观评估 (CN 15+指标 + US)
-- `/valuation` — 估值分析 (10种方法)
-- `/full-report` — 综合多维分析
-- `/spot` — 实时行情（全球指数/外汇/商品/加密货币/个股）
-- `/intraday` — 盘中分钟K线（自动切换AKShare/yfinance）
-- `/sentiment` — 新闻情绪分析
-- `/report-analyze` — 年报文本分析
-- `/review` — 回顾历史判断
+CLI 命令与环境变量方法详见 `docs/capabilities.md`。Skills 详见 CLAUDE.md。
 
 ## 关键依赖
 
@@ -256,131 +166,46 @@ typer, rich, PyYAML, jinja2
 diskcache (SQLite缓存)
 ```
 
-## 实施阶段
-
-### Phase 1: 基础骨架 + 数据层
-1. 项目结构 + pyproject.toml + config YAML
-2. data/base.py (Protocol定义) + models.py
-3. cache.py + normalizer.py
-4. providers/akshare.py + providers/yfinance.py
-5. registry.py
-6. CLI 入口 (`stocks-cli fetch <TICKER>` 可拉取数据)
-7. **验证**: 取到 600519.SH 和 AAPL 的 OHLCV
-
-### Phase 2: 首批分析模块
-1. analysis/base.py (AbstractAnalyzer, AnalysisResult)
-2. analysis/technical.py (趋势/RSI/MACD/支撑阻力)
-3. CLI analyze-stock 命令 + Rich 输出
-4. `.claude/skills/analyze-stock.md`
-5. analysis/macro.py (利率/收益率曲线/CPI/PMI)
-6. `.claude/skills/macro-check.md`
-7. **验证**: `/analyze-stock 600519.SH` 和 `/macro-check` 可用
-
-### Phase 3: 全部分析模块 + 数据源
-1. providers/fred.py + providers/coingecko.py + providers/news.py
-2. analysis/fundamental/ (FCFF/FCFE/DDM/Graham/EPV/NCAV/RI/multiples/fcf_quality/health/aggregator) + capital_flow.py + sentiment.py + correlation.py + policy.py + risk.py + benchmark.py + scenario.py
-3. 剩余 CLI 命令 + Skills
-
-### Phase 4: 集成 + 汇总 + 跟踪
-1. scoring.yaml + scorer.py (加权打分)
-2. aggregator.py + report.py + Jinja2 模板
-3. CLI full-report 命令 + `/full-report` skill
-4. src/track/ (record.py + review.py + stats.py)
-5. CLI review 命令
-6. **验证**: `/full-report 600519.SH` 输出完整多维分析报告 + 风险 + 基准 + 情景
-
-### Phase 5: 打磨
-1. JSON 输出 + 配置管理命令
-2. 并行化分析模块 (ThreadPoolExecutor)
-3. 数据源健康检查 + 降级
-4. 错误处理（网络/无效ticker/限流）
-5. --watchlist 批量分析
-6. 可选 Streamlit dashboard
-
-## 验证方案
-
-每个 Phase 结束后的验证：
-- **Phase 1**: `python -m src.cli.main ohlcv 600519.SH` 返回标准化的 OHLCV DataFrame
-- **Phase 2**: `/analyze-stock 600519.SH` 输出技术面 + `/macro-check` 输出宏观评估
-- **Phase 3**: 每个 `/xxx-check` skill 可独立运行，返回有意义的分析
-- **Phase 4**: `/full-report 600519.SH` 输出 7 维度加权综合评分 + 判断 + 风险
-- **Phase 5**: 多股票批量分析不超时，降级可用
-
 ---
 
-## 开发进度 (2026-05-08)
+## 已知限制与待完善
 
-### 已完成
+### 数据源
 
-| Phase | 内容 | 状态 |
-|-------|------|------|
-| 1 | 项目骨架 + 数据层 (AKShare/yfinance/CNINFO providers, Parquet 存储, 增量获取) | ✓ |
-| 2 | 分析基类 + 技术分析 + 宏观分析 | ✓ |
-| 3 | 基本面估值子模块 (10个方法) | ✓ 代码完成 |
-| 3 | 其余分析模块 (7个, 代码完成) | ✓ 代码完成 |
-| 3 | CNINFO 年报下载 + MarkItDown | ✓ 超出计划 |
-| 4 | 集成层 (scorer/aggregator/report) + 跟踪 | ✓ |
-| — | CLI 命令: ohlcv, analyze-stock, financials, reports, macro-check, valuation, full-report, review | ✓ |
-| — | Skills: /fetch-stock, /analyze-stock, /macro-check, /valuation, /full-report, /review | ✓ |
-| — | 全球资产数据: commodity/forex/crypto/yield-curve CLI + Skills, index 统一为全球入口 | ✓ 2026-05-08 |
-| — | 实时行情: /spot 命令 (概览/涨跌榜/个股/自选) + fetch --spot flag | ✓ 2026-05-08 |
-| — | 盘中数据: /intraday 命令 + ohlcv --intraday flag (AKShare→yfinance 自动降级) | ✓ 2026-05-09 |
-| — | 新闻情绪: /sentiment 命令 + NewsProvider + jieba NLP 情感引擎 | ✓ 2026-05-09 |
-| — | 年报分析: /report-analyze 命令 + ReportTextAnalyzer | ✓ 2026-05-09 |
-| — | 宏观数据扩展: CN 从 3→15+ 指标 (PPI/GDP/M2/社融/LPR/进出口/就业...) | ✓ 2026-05-09 |
-| — | Phase 3 CLI/Skills 收尾: correlation-check, risk-check, benchmark, scenario, market-scan | ✓ 2026-05-09 |
-| — | CLI 重组: fetch 组 (9) + live 组 (2) + 顶层 (13) | ✓ 2026-05-09 |
-| — | DataGateway: 统一数据网关 (降级/缓存/PQ读写/macro聚合) | ✓ 2026-05-10 |
-| — | Baostock + SEC EDGAR: A股三级降级链 + 美股 10-K 年报 | ✓ 2026-05-10 |
+| 数据源 | 限制 |
+|--------|------|
+| AKShare | 东方财富频繁限流；接口偶尔变更；无港股/美股财报、ETF、可转债 |
+| YFinance | 批量请求极快触发 Rate Limit；默认复权偶尔出错；部分品种历史短 (CNY外汇对)；A股/港股延迟 15 分钟 |
+| FRED | 需 `FRED_API_KEY` 环境变量；仅美国，无中国/欧洲宏观 |
+| CoinGecko | 免费版速率限制严格 (~10-30次/分钟)；历史数据精度不如交易所 API |
+| Baostock | 仅 A 股日线，无财务/指数/汇率数据，精度和时效性略低 |
+| CNINFO | 仅 A 股年报，缺半年报/季报 |
+| SEC EDGAR | 仅支持 10-K 年报，无 10-Q 季报；下载速度慢 |
+| News | 仅 CN 新闻 (东方财富 + CCTV)，无 US/HK 源 |
 
-### 待完成
+### 功能覆盖
 
-**数据源 (Phase 3 遗留):**
-- [x] `providers/fred.py` — 美国宏观数据 (FRED) — 2026-05-08
-- [x] `providers/coingecko.py` — 加密货币数据 — 2026-05-08
-- [x] DXY 美元指数 (yfinance) — 2026-05-08
-- [x] 大宗商品数据 (yfinance, 10种期货) — 2026-05-08
-- [x] 汇率数据 (yfinance, 9个汇率对) — 2026-05-08
-- [x] 全球指数 (HK/JP/UK/DE/FR) — 2026-05-08
-- [x] 加密货币 CLI/Skill 暴露 — 2026-05-08
-- [x] 美债完整收益率曲线 (3M→30Y) — 2026-05-08
-- [x] `providers/news.py` — 新闻抓取 (AKShare 东方财富 + CCTV) + NLP 情绪 (jieba + 金融情感词典)
+| 类别 | 现状 | 缺失 |
+|------|------|------|
+| A股财报 | 年报 + 三张表完整 | 缺半年报/季报 |
+| 美股财报 | 10-K 年报 + yfinance 三张表 | 缺 10-Q 季报 |
+| 港股 | 日线可用 | 缺财报/年报 |
+| ETF | 不支持 | 无 ETF 数据 |
+| 可转债 | 不支持 | 无可转债数据 |
 
-**CLI + Skills (Phase 3 遗留):**
-- [x] `market-scan` — 多市场概览 `/market-scan` (全球指数/商品/外汇/加密货币/A股，6维度涨跌幅+趋势)
-- [x] `capital-flow` — 资金流向 `flow` CLI + `/fetch-flow` Skill (沪深港通北向/南向)
-- [x] `sentiment-check` — 情绪检测 `/sentiment` (个股级，非全市场; jieba + 金融情感词典)
-- [x] `correlation-check` — 跨市场联动 `/correlation-check` (黄金/DXY/VIX → Risk-On/Risk-Off)
-- [x] `risk-check` — 风险评估 `/risk-check` (VaR/CVaR/最大回撤/波动率/流动性)
-- [x] `benchmark` — 基准对比 `/benchmark` (vs 基准指数 + 股债性价比)
-- [x] `scenario` — 情景分析 `/scenario` (52周高低点 + 波动率敏感性区间)
+### 数据质量
 
-**基本面 (Phase 3 遗留):**
-- [x] 财报文本分析 (/report-analyze: 审计意见/指标提取/风险因素/管理层展望; MarkItDown 已集成)
-- [x] AKShare 三张表接口不稳定 → 已切换到同花顺 stock_financial_*_ths，三张表稳定可用
+| 问题 | 状态 |
+|------|------|
+| A股幸存者偏差 (退市股) | 未处理 |
+| 前视偏差 (财报发布日期 vs 截止日) | 未检测 |
+| 复权数据校验 | 未实现 |
+| API 限速自动退避/重试 | 无机制 |
+| 分析模块并行化 | 未实现 |
 
-**Phase 5 打磨:**
-- [ ] JSON 输出 + 配置管理命令
-- [ ] 并行化分析模块 (ThreadPoolExecutor)
-- [ ] 数据源健康检查 + 降级
-- [ ] `--watchlist` 批量分析
-- [ ] Streamlit dashboard (demo 骨架 `dashboard_demo.py`，需求待细化)
+### 输出
 
-**数据质量:**
-- [ ] A 股幸存者偏差处理 (退市公司历史)
-- [ ] 前视偏差检测 (财报发布日期 vs 截止日)
-- [ ] 复权数据校验
-- [x] 同花顺财务数据清洗 (normalize_financials, 2026-05-07) — 存储层统一转换带单位字符串为浮点数
-- [x] 估值方法 NaN 传播修复 (2026-05-07) — 所有 10 个方法的 float(x or 0) 陷阱已修复
-- [x] 估值方法失败原因标注 (reason 字段，2026-05-07) — 区分"数据缺失"、"模型不适用"、"结果不合理"
-- [x] 分红数据抓取 (ak.stock_history_dividend_detail, 2026-05-07) — 存储为 dividends.parquet，DDM 优先使用
-- [x] DDM 参数修复 (2026-05-07) — 年度化 DPS、分红 CAGR 替代净利润增长、3% 最小利差防 Gordon 爆炸
-- [x] 股本数据修补 (2026-05-07) — BS 股本为 0 时从摘要 净利润/EPS 反推
-- [x] DDM 分红单位自适应 (2026-05-08) — A 股"元/10 股"、港股/美股"元/股"，根据 Market enum 自动转换
-- [x] normalizer.py 函数补全 (2026-05-08) — 修复 normalize_dates/normalize_columns 缺失导致技术分析报错
-- [x] SHIBOR 数据获取修复 (2026-05-08) — 使用 macro_china_shibor_all 获取全期限利率
-- [x] 宏观数据聚合器 (2026-05-08) — 整合 CN(AKShare) + US(FRED) + DXY + Crypto
-- [x] 宏观数据扩展 (2026-05-09) — CN 新增 PPI, GDP, 财新/非制造业PMI, M1/M2, 社融, LPR, 外汇储备, 进出口, 工业增加值, 社消零售, 失业率, 国债收益率曲线
-- [ ] A 股幸存者偏差处理 (退市公司历史)
-- [ ] 前视偏差检测 (财报发布日期 vs 截止日)
-- [ ] 复权数据校验
+| 现状 | 缺失 |
+|------|------|
+| 终端 Rich | 无 JSON 导出 |
+| 无 Dashboard | Streamlit demo 骨架存在，需求待细化 |

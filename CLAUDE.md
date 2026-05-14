@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目
 
-金融分析助手 — 多市场、多维度金融分析系统。详见 `docs/architecture.md`。
+金融分析助手 — 多市场、多维度金融分析系统。文档：`docs/architecture.md` / `docs/capabilities.md` / `docs/data-flow.md` / `docs/data-structure.md`。
 
 ## 核心原则
 
@@ -31,7 +31,7 @@ src/cli/            # CLI 入口 (Click)
 config/             # 配置文件 (主观策略层)
 data/               # 原始数据 (Parquet, PDF, MD) — gitignored
 .claude/skills/     # Claude Code Skills
-docs/               # 文档 (architecture.md, data-structure.md)
+docs/               # 架构/功能/数据流/存储结构
 ```
 
 ## CLI 命令
@@ -98,34 +98,10 @@ python -m src.cli.main summary                     # 每日数据更新汇总
 - `/scenario <TICKER>` — 情景分析 (52周高低点 + 波动率敏感性区间)
 - `/market-scan` — 多市场扫描 (全球资产 1日/5日/1月/3月/6月 涨跌幅 + 均线趋势)
 
-## 已实现模块
-
-| 层 | 模块 | 状态 |
-|----|------|------|
-| 数据 | AKShare (A股日线/指数/15+宏观指标/三张表 via 同花顺) | 可用 |
-| 数据 | YFinance (全球股票/商品/外汇/指数/加密货币) | 可用 (受速率限制) |
-| 数据 | Baostock (A股日线，免费免注册，第三降级) | 可用 |
-| 数据 | CNINFO (年报PDF+MD) | 可用 |
-| 数据 | SEC EDGAR (美股 10-K 年报) | 可用 |
-| 数据 | 实时行情 (YFinance 概览 + AKShare 个股) | 可用 |
-| 数据 | 盘中分钟K线 (AKShare → yfinance 自动降级) | 可用 |
-| 数据 | 新闻抓取 (AKShare 东方财富 + CCTV) | 可用 |
-| 数据 | Parquet 存储 + 增量获取 | 可用 |
-| 分析 | 新闻 NLP 情绪 (jieba + 金融情感词典) | 可用 |
-| 分析 | 年报文本分析 (审计意见/指标提取/风险/展望) | 可用 |
-| 分析 | 技术分析 | 可用 |
-| 分析 | 宏观分析 | 可用 (CN 15+指标 + US FRED) |
-| 分析 | 基本面估值 (10方法) | 可用 |
-| 分析 | 其余 7 模块 | 代码完成 |
-| 集成 | 打分/聚合/报告 | 可用 |
-| 跟踪 | 判断记录/回测 | 可用 (需积累数据) |
-
 ## 已知限制
 
-- AKShare 被东方财富频繁限流，新 ticker 首次拉取可能失败；DataGateway 自动降级 yfinance
-- 详细三张表使用同花顺接口 (stock_financial_*_ths)，已替代不稳定的东方财富接口
-- 新闻抓取使用 AKShare 东方财富 + CCTV，未实现 RSS 源
-- yfinance 批量拉取有限速，多品种间需加间隔
-- FRED 需要环境变量 `FRED_API_KEY`（免费申请）
-- 商品期货数据来自连续主力合约 (`GC=F`)，非现货价格
-- CNY 相关汇率对历史数据可能较短
+详见 `docs/architecture.md`。关键操作要点：
+
+- AKShare 限流 → DataGateway 自动降级 (AKShare→yfinance→Baostock)
+- yfinance 批量拉取有限速，多品种需加间隔
+- FRED 需 `FRED_API_KEY` 环境变量
