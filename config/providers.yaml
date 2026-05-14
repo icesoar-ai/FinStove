@@ -49,16 +49,31 @@ credentials:
     api_key: "${FRED_API_KEY}"
 
 # ── 限速配置 ─────────────────────────────────────────
-# 每个 provider 的访问节奏、退避策略、冷却机制。
-# 未列出的 provider 使用 default 配置。
+# 控制每个 Provider 的访问节奏，防止被封 IP / 触发限流。
+# 限速模块 (src/data/rate_limiter.py) 读取此配置，纯数据驱动，
+# 不写死任何 Provider 特定逻辑。
+#
+# 参数说明：
+#   min_interval_ms   两次请求之间的最小间隔 (毫秒)。加随机抖动后实际在
+#                     [min*(1-jitter), min*(1+jitter)] 区间内波动。
+#   max_retries       单次请求的最大重试次数。含首次，即 1=不重试。
+#   backoff           退避策略。linear: base*N, exponential: base*2^(N-1),
+#                     fixed: 每次固定 base。N 为当前重试序号 (1-based)。
+#   backoff_base_ms   退避基数 (毫秒)。重试前等待的基准时长。
+#   jitter_pct        随机抖动百分比 (0-100)。避免规律请求被反爬识别。
+#                     实际延迟 += uniform(-jitter, +jitter) × 基准值。
+#   cooldown_failures 连续失败 N 次后进入冷却期，期间拒绝所有请求。
+#   cooldown_ms       冷却期时长 (毫秒)。冷却结束后自动恢复。
+#
+# 未列出的 Provider 使用 default 配置。
 rate_limit:
   default:
     min_interval_ms: 1000
     max_retries: 1
-    backoff: linear          # linear | exponential | fixed
+    backoff: linear
     backoff_base_ms: 2000
-    jitter_pct: 20           # ±20% 随机抖动
-    cooldown_failures: 3     # 连续失败 N 次进入冷却
+    jitter_pct: 20
+    cooldown_failures: 3
     cooldown_ms: 30000
 
   akshare:
