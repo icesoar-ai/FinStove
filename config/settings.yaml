@@ -1,54 +1,66 @@
+# 系统全局设置
+#
+# app:    应用元信息。
+# data:   数据存储、缓存、请求限制。
+# analysis: 分析模块默认参数。
+# output: 输出格式与报告配置。
+
+# ── 应用 ────────────────────────────────────────────
 app:
   name: "Stocks Analysis Assistant"
   version: "0.1.0"
   locale: "zh-CN"
   timezone: "Asia/Shanghai"
 
+# ── 数据存储与缓存 ──────────────────────────────────
 data:
-  storage_dir: "data"
+  storage_dir: "data"                          # Parquet 数据根目录
+
   cache:
-    backend: "diskcache"
-    directory: "~/.cache/stocks"
-    default_ttl: 3600
-    ttl_overrides:
-      realtime: 60
-      daily: 86400
-      financials: 86400
-      macro: 86400
-      news: 1800
+    backend: "diskcache"                       # 缓存后端 (SQLite)
+    directory: "~/.cache/stocks"               # 缓存文件路径
+    default_ttl: 3600                          # 默认缓存有效期 (秒)
+    ttl_overrides:                             # 按数据类型覆盖 TTL
+      realtime: 60                             #   实时行情: 1 分钟
+      daily: 86400                             #   日线: 24 小时
+      financials: 86400                        #   财报: 24 小时
+      macro: 86400                             #   宏观: 24 小时
+      news: 1800                               #   新闻: 30 分钟
 
   limits:
-    request_timeout: 30
-    max_retries: 3
-    retry_backoff: 2.0
-    concurrent_requests: 5
+    request_timeout: 30                       # 单次 API 请求超时 (秒)
+    max_retries: 3                            # HTTP 层面最大重试
+    retry_backoff: 2.0                        # 重试退避倍数
+    concurrent_requests: 5                    # 并发请求上限
 
+# ── 分析默认参数 ────────────────────────────────────
 analysis:
   defaults:
-    lookback_bars: 250
-    ma_periods: [5, 10, 20, 60, 120, 250]
-    rsi_period: 14
-    macd_fast: 12
-    macd_slow: 26
-    macd_signal: 9
+    lookback_bars: 250                        # 技术分析默认回看 K 线数
+    ma_periods: [5, 10, 20, 60, 120, 250]    # 均线周期列表
+    rsi_period: 14                            # RSI 计算周期
+    macd_fast: 12                             # MACD 快线
+    macd_slow: 26                             # MACD 慢线
+    macd_signal: 9                            # MACD 信号线
 
   fundamental:
     dcf:
-      projection_years: 5
-      terminal_growth: 0.025
-      default_erp: 0.06
-    pe_band_lookback_years: 5
+      projection_years: 5                     # DCF 预测年数
+      terminal_growth: 0.025                  # 终值增长率 (2.5%)
+      default_erp: 0.06                       # 默认股权风险溢价 (6%)
+    pe_band_lookback_years: 5                 # PE 分位回看年数
 
   macro:
-    yield_curve_spread: "10Y-2Y"
-    recession_threshold: -0.5
+    yield_curve_spread: "10Y-2Y"              # 收益率曲线利差计算对
+    recession_threshold: -0.5                 # 利差低于此值视为衰退信号
 
+# ── 输出 ────────────────────────────────────────────
 output:
-  default_format: "standard"
-  color: true
+  default_format: "standard"                  # brief | standard | full
+  color: true                                 # Rich 终端彩色输出
   report:
-    template_dir: "config/templates"
-    include_disclaimer: true
+    template_dir: "config/templates"          # Jinja2 模板目录
+    include_disclaimer: true                  # 是否包含免责声明
     disclaimer_text: |
       本报告基于公开免费数据源生成，仅供参考，不构成投资建议。
       数据可能存在延迟或错误，请以官方披露为准。

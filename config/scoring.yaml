@@ -1,29 +1,46 @@
+# 综合评分策略配置
+#
+# 客观分析模块产出各维度信号 (src/analysis/)，主观权重在此配置。
+# 修改观点只需改此文件，不动分析代码。
+#
+# contexts: 不同分析场景的维度权重分配。
+#   维度包括: fundamental, macro, technical, flow, sentiment, correlation, policy。
+#   每个 context 下权重之和应为 1.0。
+#
+# thresholds: 综合评分到买卖建议的映射。
+#   strong_buy / buy / hold(下限) / sell(下限) / strong_sell(下限)。
+#   评分区间 [-2, +2]，如 strong_buy=1.0 表示 ≥1.0 为强烈看多。
+#
+# confidence: 置信度控制。
+#   min_results_for_score    至少有多少个模块有产出才计算综合分。
+#   low_confidence_threshold 低于此值标记为低置信度。
+
 contexts:
   long_term_investment:
     dimensions:
-      fundamental: 0.40
-      macro: 0.20
-      policy: 0.15
-      technical: 0.10
-      correlation: 0.05
-      flow: 0.05
-      sentiment: 0.05
+      fundamental: 0.40     # 基本面权重最高 — 长期看价值
+      macro: 0.20           # 宏观环境
+      policy: 0.15          # 政策方向
+      technical: 0.10       # 技术面辅助
+      correlation: 0.05     # 跨市场联动
+      flow: 0.05            # 资金流向
+      sentiment: 0.05       # 市场情绪
     description: "侧重内在价值和长期趋势"
 
   short_term_trading:
     dimensions:
-      technical: 0.35
-      flow: 0.25
-      sentiment: 0.20
-      macro: 0.10
+      technical: 0.35       # 技术面权重最高 — 短期看信号
+      flow: 0.25            # 资金面
+      sentiment: 0.20       # 情绪面
+      macro: 0.10           # 宏观辅助
       correlation: 0.05
-      fundamental: 0.03
+      fundamental: 0.03     # 基本面权重最低
       policy: 0.02
     description: "侧重技术面和资金面信号"
 
   macro_assessment:
     dimensions:
-      macro: 0.40
+      macro: 0.40           # 宏观权重最高
       policy: 0.25
       correlation: 0.20
       flow: 0.10
@@ -31,12 +48,12 @@ contexts:
     description: "纯宏观视角"
 
 thresholds:
-  strong_buy: 1.0
-  buy: 0.3
-  hold: -0.3
-  sell: -1.0
-  strong_sell: -1.0
+  strong_buy: 1.0           # ≥1.0 → 强烈看多
+  buy: 0.3                  # ≥0.3 → 看多
+  hold: -0.3                # -0.3 ~ +0.3 → 中性/持有
+  sell: -1.0                # ≤-1.0 → 看空
+  strong_sell: -1.0         # ≤-1.0 → 强烈看空
 
 confidence:
-  min_results_for_score: 3
-  low_confidence_threshold: 0.4
+  min_results_for_score: 3         # 至少 3 个模块有结果才出综合分
+  low_confidence_threshold: 0.4    # 置信度 < 40% 标记为低置信度
