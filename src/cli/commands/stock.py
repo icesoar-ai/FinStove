@@ -36,7 +36,7 @@ def analyze_stock(ticker: str, start: str, end: str, market: str):
         if mkt == Market.CN:
             start_fmt = gw._normalize_date(start) if "-" in start else start
             end_fmt = gw._normalize_date(end) if "-" in end else end
-            df = gw.get_daily(symbol, start_fmt, end_fmt)
+            df = gw.get_daily(symbol, mkt, start_fmt, end_fmt)
         else:
             df = gw.get_daily(symbol, mkt.value, start, end)
 
