@@ -47,3 +47,79 @@ routing:
 credentials:
   fred:
     api_key: "${FRED_API_KEY}"
+
+# ── 限速配置 ─────────────────────────────────────────
+# 每个 provider 的访问节奏、退避策略、冷却机制。
+# 未列出的 provider 使用 default 配置。
+rate_limit:
+  default:
+    min_interval_ms: 1000
+    max_retries: 1
+    backoff: linear          # linear | exponential | fixed
+    backoff_base_ms: 2000
+    jitter_pct: 20           # ±20% 随机抖动
+    cooldown_failures: 3     # 连续失败 N 次进入冷却
+    cooldown_ms: 30000
+
+  akshare:
+    min_interval_ms: 2000
+    max_retries: 3
+    backoff: exponential
+    backoff_base_ms: 2000
+    jitter_pct: 20
+    cooldown_failures: 5
+    cooldown_ms: 60000
+
+  yfinance:
+    min_interval_ms: 3000
+    max_retries: 2
+    backoff: exponential
+    backoff_base_ms: 5000
+    jitter_pct: 15
+    cooldown_failures: 5
+    cooldown_ms: 120000
+
+  coingecko:
+    min_interval_ms: 6000
+    max_retries: 2
+    backoff: exponential
+    backoff_base_ms: 10000
+    jitter_pct: 10
+    cooldown_failures: 3
+    cooldown_ms: 120000
+
+  fred:
+    min_interval_ms: 1000
+    max_retries: 2
+    backoff: linear
+    backoff_base_ms: 2000
+    jitter_pct: 20
+    cooldown_failures: 3
+    cooldown_ms: 60000
+
+  cninfo:
+    min_interval_ms: 2000
+    max_retries: 2
+    backoff: exponential
+    backoff_base_ms: 2000
+    jitter_pct: 20
+    cooldown_failures: 3
+    cooldown_ms: 60000
+
+  baostock:
+    min_interval_ms: 500
+    max_retries: 1
+    backoff: fixed
+    backoff_base_ms: 1000
+    jitter_pct: 20
+    cooldown_failures: 5
+    cooldown_ms: 30000
+
+  news_cn:
+    min_interval_ms: 2000
+    max_retries: 2
+    backoff: exponential
+    backoff_base_ms: 2000
+    jitter_pct: 20
+    cooldown_failures: 5
+    cooldown_ms: 60000

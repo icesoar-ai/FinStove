@@ -18,6 +18,7 @@ import pandas as pd
 
 from .base import Market
 from .cache import DataCache
+from .rate_limiter import RateLimiter
 from .storage import ParquetStorage
 
 # Providers
@@ -34,9 +35,17 @@ from .providers.edgar import SECEDGARProvider
 class DataGateway:
     """统一数据网关."""
 
+    # Provider → rate limiter key 映射
+    _RATE_KEY: dict[str, str] = {
+        "_ak": "akshare", "_yf": "yfinance", "_bs": "baostock",
+        "_fred": "fred", "_cninfo": "cninfo", "_cg": "coingecko",
+        "_news": "news_cn",
+    }
+
     def __init__(self, cache: Optional[DataCache] = None, storage: Optional[ParquetStorage] = None):
         self._cache = cache or DataCache()
         self._storage = storage or ParquetStorage()
+        self._rate_limiter = RateLimiter.from_yaml("config/providers.yaml")
         self._ak = AKShareProvider(cache=self._cache, storage=self._storage)
         self._yf = YFinanceProvider(cache=self._cache, storage=self._storage)
         self._bs = BaostockProvider(cache=self._cache, storage=self._storage)
@@ -48,17 +57,24 @@ class DataGateway:
 
     # ── 内部工具 ─────────────────────────────────────────────
 
-    @staticmethod
-    def _try(fn, *args, **kwargs) -> Optional[pd.DataFrame]:
-        """统一异常捕获，避免每个降级点重复 try/except。"""
-        try:
-            return fn(*args, **kwargs)
-        except Exception:
-            return None
+    def _try(self, provider_attr: str, fn, *args, **kwargs) -> Optional[pd.DataFrame]:
+        """带限速 + 退避重试的 Provider 调用。
+
+        provider_attr: 实例属性名 (如 "_ak", "_yf")，用于查限速配置。
+        """
+        rkey = self._RATE_KEY.get(provider_attr, "default")
+        for attempt in self._rate_limiter.attempts(rkey):
+            try:
+                result = fn(*args, **kwargs)
+                attempt.success()
+                return result
+            except Exception:
+                attempt.failure()
+        return None
 
     def _read_or_fetch(
         self, asset: str, mkt: str, sym: str, dtype: str,
-        provider_fn, *args,
+        rkey: str, provider_fn, *args,
         date_col: str = "date",
         ttl: int = 86400,
         **kwargs
@@ -67,6 +83,7 @@ class DataGateway:
 
         Args:
             asset/mkt/sym/dtype: Parquet 路径参数
+            rkey: 限速配置键 (如 "akshare", "yfinance")
             provider_fn: Provider 方法
             *args/**kwargs: Provider 方法参数
             date_col: 日期列名（用于判断新鲜度）
@@ -87,7 +104,7 @@ class DataGateway:
                     break
 
         # Fetch fresh
-        df = self._try(provider_fn, *args, **kwargs)
+        df = self._try(rkey, provider_fn, *args, **kwargs)
         if df is not None and not df.empty:
             self._cache.set(
                 provider_fn.__self__.__class__.__name__,
@@ -98,10 +115,10 @@ class DataGateway:
 
     def _force_fetch(
         self, asset: str, mkt: str, sym: str, dtype: str,
-        provider_fn, *args, **kwargs
+        rkey: str, provider_fn, *args, **kwargs
     ) -> pd.DataFrame:
         """强制刷新：跳过 Parquet，直接调 Provider 并持久化。"""
-        df = self._try(provider_fn, *args, **kwargs)
+        df = self._try(rkey, provider_fn, *args, **kwargs)
         if df is not None and not df.empty:
             self._storage.merge_and_save(df, asset, mkt, sym, dtype)
         return df
@@ -126,35 +143,35 @@ class DataGateway:
             # AKShare uses YYYYMMDD
             if force:
                 df = self._try(
-                    self._ak.get_daily, symbol, start, end,
+                    "_ak", self._ak.get_daily, symbol, start, end,
                     dir_name=dir_name
                 )
             else:
                 df = self._read_or_fetch(
                     "stock", "cn", dir_name, "daily",
-                    self._ak.get_daily, symbol, start, end,
+                    "akshare", self._ak.get_daily, symbol, start, end,
                     dir_name=dir_name,
                 )
             # Fallback chain: AKShare → yfinance → Baostock
             if df is None or df.empty:
                 df = self._try(
-                    self._yf.get_daily, symbol, "cn", start_fmt, end_fmt,
+                    "_yf", self._yf.get_daily, symbol, "cn", start_fmt, end_fmt,
                     store_symbol=dir_name
                 )
             if df is None or df.empty:
                 df = self._try(
-                    self._bs.get_daily, symbol, start, end,
+                    "_bs", self._bs.get_daily, symbol, start, end,
                     store_symbol=dir_name
                 )
         else:
             if force:
                 df = self._try(
-                    self._yf.get_daily, symbol, market.value, start_fmt, end_fmt
+                    "_yf", self._yf.get_daily, symbol, market.value, start_fmt, end_fmt
                 )
             else:
                 df = self._read_or_fetch(
                     "stock", market.value, symbol, "daily",
-                    self._yf.get_daily, symbol, market.value, start_fmt, end_fmt,
+                    "yfinance", self._yf.get_daily, symbol, market.value, start_fmt, end_fmt,
                 )
         return df if df is not None else pd.DataFrame()
 
@@ -181,11 +198,11 @@ class DataGateway:
 
     def _fetch_cn_index(self, symbol: str, force: bool) -> pd.DataFrame:
         if force:
-            df = self._try(self._ak.get_index_daily, symbol)
+            df = self._try("_ak", self._ak.get_index_daily, symbol)
         else:
             df = self._read_or_fetch(
                 "index", "cn", symbol, "daily",
-                self._ak.get_index_daily, symbol,
+                "akshare", self._ak.get_index_daily, symbol,
             )
         return df if df is not None else pd.DataFrame()
 
@@ -206,11 +223,11 @@ class DataGateway:
         results = {}
         for m, s in targets:
             if force:
-                df = self._try(self._yf.get_index, s, m)
+                df = self._try("_yf", self._yf.get_index, s, m)
             else:
                 df = self._read_or_fetch(
                     "index", m, s, "daily",
-                    self._yf.get_index, s, m,
+                    "yfinance", self._yf.get_index, s, m,
                 )
             if df is not None and not df.empty:
                 results[f"{m}_{s}"] = df
@@ -225,16 +242,16 @@ class DataGateway:
         if market == Market.CN:
             ak_period = interval.replace("m", "").replace("h", "60")
             df = self._try(
-                self._ak.get_intraday, symbol, period=ak_period, adjust="qfq"
+                "_ak", self._ak.get_intraday, symbol, period=ak_period, adjust="qfq"
             )
             if df is None or df.empty:
                 df = self._try(
-                    self._yf.get_intraday, symbol, "cn",
+                    "_yf", self._yf.get_intraday, symbol, "cn",
                     interval=interval, period="5d"
                 )
         else:
             df = self._try(
-                self._yf.get_intraday, symbol, market.value,
+                "_yf", self._yf.get_intraday, symbol, market.value,
                 interval=interval, period="5d"
             )
         return df if df is not None else pd.DataFrame()
@@ -264,7 +281,7 @@ class DataGateway:
         if market == Market.CN:
             dir_name = self._stock_dir(symbol)
             return self._ak.get_financials(symbol, dir_name=dir_name)
-        result = self._try(self._yf.get_financials, symbol, market.value)
+        result = self._try("_yf", self._yf.get_financials, symbol, market.value)
         return result if result is not None else {}
 
     def get_dividends(self, symbol: str, market: Market = Market.CN) -> pd.DataFrame:
@@ -276,7 +293,7 @@ class DataGateway:
         if market == Market.CN:
             dir_name = self._stock_dir(symbol)
             return self._ak.get_dividends(symbol, dir_name=dir_name)
-        result = self._try(self._yf.get_dividends, symbol, market.value)
+        result = self._try("_yf", self._yf.get_dividends, symbol, market.value)
         return result if result is not None else pd.DataFrame()
 
     def get_reports(self, symbol: str, market: Market = Market.CN) -> list[dict]:
@@ -499,9 +516,9 @@ class DataGateway:
 
     def get_crypto(self, symbol: str) -> pd.DataFrame:
         """加密货币，YFinance 优先，降级 CoinGecko。"""
-        df = self._try(self._yf.get_crypto_daily, symbol, "usd", "2020-01-01")
+        df = self._try("_yf", self._yf.get_crypto_daily, symbol, "usd", "2020-01-01")
         if df is None or df.empty:
-            df = self._cg.get_historical(symbol, days=365)
+            df = self._try("_cg", self._cg.get_historical, symbol, days=365)
         return df if df is not None else pd.DataFrame()
 
     # ── 工具 ─────────────────────────────────────────
