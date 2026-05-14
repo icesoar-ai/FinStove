@@ -2,6 +2,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
+from src.data.gateway import DataGateway
 from src.utils.ticker import parse_ticker, stock_dir
 
 console = Console()
