@@ -1,123 +1,79 @@
-# 金融分析助手
+# 金融分析助手 (FinStove)
 
-多市场、多维度金融分析系统。覆盖 A 股 / 港股 / 美股 / 日股 / 英股 / 德股 / 法股，整合宏观、技术面、基本面、情绪、资金流向等维度，输出综合判断。
+多市场、多维度金融分析系统。覆盖 A 股 / 港股 / 美股 / 日股 / 英股 / 德股 / 法股，全免费数据源，自然语言驱动。
 
-## 快速开始
+## 使用方式
 
-```bash
-pip install -e .
-python -m src.cli.main --help
-```
+在项目目录下启动 Claude Code，用自然语言指令操作。例如：
 
-## Skills（22 个）
+- "帮我抓取茅台的数据" → 自动拉取日线、财报、年报
+- "分析一下科创 50" → 技术面分析 + 信号判断
+- "对宁德时代做综合估值" → 多方法估值 + 综合报告
+- "评估当前宏观环境" → CN + US 宏观指标汇总
+- "扫描全球市场" → 各资产类别涨跌幅 + 趋势
 
-### 数据抓取
+## 能做什么
 
-| Skill | 说明 |
-|-------|------|
-| `/fetch-all` | 一键拉取全部每日数据（指数/商品/汇率/加密货币/美债） |
-| `/fetch-stock <TICKER> [ohlcv\|financials\|reports]` | 股票数据抓取（日线/财报/年报，可组合） |
-| `/fetch-index [MARKET] [CODE]` | 全球指数日线（CN/US/HK/JP/UK/DE/FR） |
-| `/fetch-commodity [CODE]` | 大宗商品期货（黄金/白银/原油/铜/天然气等 10 种） |
-| `/fetch-forex [PAIR]` | 外汇汇率（USD/CNY, EUR/CNY, JPY/CNY 等 9 对） |
-| `/fetch-crypto [SYMBOL]` | 加密货币（BTC, ETH, SOL 等） |
-| `/fetch-flow` | 沪深港通资金流向（北向/南向） |
-| `/fetch-yield-curve` | 美国国债收益率曲线（3M→30Y） |
+### 数据覆盖
 
-### 实时行情
+| 类别 | 覆盖范围 |
+|------|---------|
+| 股票 | A 股 / 港股 / 美股（日线、三张表、年报原文） |
+| 指数 | 上证、深证、沪深 300、科创 50、标普 500、纳斯达克、恒生、日经、富时 100、DAX、CAC 40 等 |
+| 大宗商品 | 黄金、白银、WTI/布伦特原油、铜、天然气等 10 种 |
+| 外汇 | 美元/人民币、欧元/美元、美元/日元等 9 对 |
+| 加密货币 | BTC、ETH 等 |
+| 宏观经济 | 中国 15+ 项指标（CPI/PPI/PMI/GDP/M2/社融/LPR/进出口/就业等）+ 美国宏观（FRED） |
+| 资金流向 | 沪深港通北向/南向资金 |
+| 新闻情绪 | A 股个股新闻 NLP 情绪评分 |
 
-| Skill | 说明 |
-|-------|------|
-| `/spot` | 实时行情概览（全球指数/外汇/商品/加密货币）+ 涨跌榜 + 个股 |
-| `/intraday <TICKER>` | 盘中分钟 K 线（1m/5m/15m/30m/60m），AKShare→yfinance 自动降级 |
+### 分析能力
 
-### 分析
+**技术分析** — 从价格和成交量中找信号。考察趋势方向（均线排列）、买卖力量（MACD、RSI）、资金进出（OBV 能量潮）、支撑阻力位，综合打出 -2 到 +2 的评分。
 
-| Skill | 说明 |
-|-------|------|
-| `/analyze-stock <TICKER>` | 技术分析（趋势/动量/成交量/支撑阻力） |
-| `/valuation <TICKER>` | 基本面估值（10 种方法：FCFF/FCFE/DDM/Graham/EPV/NCAV/RI/倍数/FCF质量/财务健康） |
-| `/macro-check` | 宏观环境评估（CN 15+指标: CPI/PPI/PMI/GDP/M2/社融/LPR/进出口/就业/国债收益率 + US via FRED） |
-| `/sentiment <TICKER>` | 新闻情绪分析（jieba 分词 + 金融情感词典） |
-| `/report-analyze <TICKER>` | 年报文本分析（审计意见/指标提取/风险因素/管理层展望） |
-| `/full-report <TICKER>` | 综合多维分析报告（10 维度加权评分） |
-| `/review <TICKER>` | 回顾历史判断，对比实际走势 |
-| `/correlation-check` | 跨市场联动分析（黄金/DXY/VIX → Risk-On/Risk-Off） |
-| `/risk-check <TICKER>` | 风险评估（VaR/CVaR/最大回撤/波动率/流动性） |
-| `/benchmark <TICKER>` | 基准对比（vs 基准指数 + 股债性价比） |
-| `/scenario <TICKER>` | 情景分析（52周高低点 + 波动率敏感性区间） |
-| `/market-scan` | 多市场扫描（全球资产 6维度涨跌幅 + 均线趋势） |
+**宏观评估** — 看大环境是松是紧。综合利率、通胀、GDP 增速、PMI（采购经理人指数，反映制造业景气度）、货币供应量、进出口、就业等指标，判断当前经济周期位置。
 
-## CLI 命令（2 组 + 13 命令，共 24 个子命令）
+**基本面估值** — 算一家公司值多少钱。用多种方法交叉验证：
 
-### 数据抓取 (`fetch`)
+| 方法 | 通俗解释 |
+|------|---------|
+| FCFF | 把公司未来能赚的自由现金流折现到今天，减掉负债，得到企业价值 |
+| FCFE | 只看属于股东的现金流折现，更直接反映股权价值 |
+| DDM（股利折现） | 把未来每年分红折现加起来，适合稳定派息的公司 |
+| Graham（格雷厄姆公式） | 价值投资经典算法：√(22.5 × 每股收益 × 每股净资产) |
+| EPV（盈利能量价值） | 假设当前盈利水平永续，不依赖增长假设，偏保守 |
+| NCAV（净流动资产） | 清算视角：流动资产减全部负债，极端保守，买"烟蒂" |
+| 剩余收益模型 | 净资产 + 未来超额收益的折现，适合 ROE 高于融资成本的公司 |
+| 相对估值 | 用 PE（市盈率）、PB（市净率）、PS（市销率）等倍数对比历史分位和同行 |
+| 财务健康 | Altman Z 值（破产风险预警）、ROE（净资产收益率）拆解、负债趋势 |
 
-```bash
-python -m src.cli.main fetch ohlcv <TICKER> [--start DATE] [-i 5m]
-python -m src.cli.main fetch index [MARKET] [CODE] [--spot]
-python -m src.cli.main fetch commodity [CODE] [--spot]
-python -m src.cli.main fetch forex [PAIR] [--spot]
-python -m src.cli.main fetch crypto [SYMBOL] [--spot]
-python -m src.cli.main fetch flow
-python -m src.cli.main fetch yield-curve
-python -m src.cli.main fetch financials <TICKER>
-python -m src.cli.main fetch reports <TICKER>
-```
+**情绪分析** — 抓取个股新闻，用 jieba 分词 + 金融情感词典做 NLP，判断舆情偏暖还是偏冷。
 
-### 实时行情 (`live`)
+**年报分析** — 读取 A 股年报全文（PDF 自动转 Markdown），提取审计意见（标准无保留 = 健康）、关键财务数字、风险因素、管理层对未来的展望。
 
-```bash
-python -m src.cli.main live spot                     # 全球概览
-python -m src.cli.main live spot -m cn               # 涨跌榜
-python -m src.cli.main live spot <TICKER>            # 个股行情
-python -m src.cli.main live intraday <TICKER> [-i 5m]
-```
+**风险评估** — 量化下行风险。VaR（在险价值，给定概率下最大亏损）、CVaR（超出 VaR 部分的平均亏损）、最大回撤、波动率。
 
-### 分析
+**情景分析** — 不做单点预测，做区间判断。乐观/悲观/中性三档目标价，加上"最拥挤方向反转"的压力测试。
 
-```bash
-python -m src.cli.main analyze-stock <TICKER>
-python -m src.cli.main valuation <TICKER>
-python -m src.cli.main macro-check
-python -m src.cli.main sentiment <TICKER> [-d 7]
-python -m src.cli.main report-analyze <TICKER>
-python -m src.cli.main full-report <TICKER> [--context long_term|short_term] [--format brief|standard|full]
-python -m src.cli.main review <TICKER>
-python -m src.cli.main correlation-check
-python -m src.cli.main risk-check <TICKER>
-python -m src.cli.main benchmark <TICKER>
-python -m src.cli.main scenario <TICKER>
-python -m src.cli.main market-scan
-```
+**基准对比** — 不孤立看一个标的。和指数比超额收益、和国债比风险溢价、和同行 ETF 比是否更优。
 
-### 工具
+**跨市场联动** — 看黄金、美元指数（DXY）、VIX 恐慌指数之间的信号，判断市场处于 Risk-On（风险偏好）还是 Risk-Off（避险）模式。
 
-```bash
-python -m src.cli.main summary                       # 每日数据更新汇总
-```
+**判断跟踪** — 每次分析记录自动保存，可回溯，按维度统计胜率，形成反馈闭环。
 
 ## 数据架构
 
-```
-data/
-├── stock/{market}/{CODE}_{NAME}/    # 个股：日线/财报/分红/年报/盘中K线/实时快照
-├── index/{market}/{CODE}/           # 全球指数
-├── commodity/global/{CODE}/         # 大宗商品
-├── forex/global/{PAIR}/             # 外汇
-├── crypto/global/{SYMBOL}/          # 加密货币
-├── macro/{cn,us}/{indicator}/       # 宏观经济
-├── flow/{market}/{channel}/         # 资金流向
-└── news/{market}/{CODE}/            # 新闻数据
-```
-
-详见 `docs/data-structure.md`。
+所有数据以 Parquet 格式存储，SQLite 做 API 请求缓存，支持增量更新。A 股数据源有三级自动降级（AKShare → YFinance → Baostock），各 Provider 有独立的访问限速和退避重试机制。
 
 ## 技术栈
 
-Python 3.12+ / Click + Rich (CLI) / AKShare + yfinance + CoinGecko + FRED + CNINFO (数据) / ta (技术指标) / jieba (中文分词) / MarkItDown (PDF转换) / pandas + pyarrow (存储)
+Python 3.12+ / Click + Rich / AKShare + yfinance + CoinGecko + FRED + CNINFO / ta / jieba / MarkItDown / pandas + pyarrow
 
 ## 文档
 
-- `docs/architecture.md` — 系统架构与实施计划
-- `docs/data-structure.md` — 数据持久化目录结构
-- `.claude/skills/` — Skills 定义文件
+| 文档 | 内容 |
+|------|------|
+| `docs/architecture.md` | 架构总览、模块设计、**全部已知限制** |
+| `docs/capabilities.md` | CLI 命令完整参考（含参数和选项） |
+| `docs/data-flow.md` | 数据流架构、Provider 详情与限制 |
+| `docs/data-structure.md` | 存储目录结构、命名规则 |
