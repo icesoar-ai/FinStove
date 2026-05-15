@@ -52,10 +52,10 @@ class DataGateway:
         self._cache = cache or DataCache()
         self._storage = storage or ParquetStorage()
         self._rate_limiter = RateLimiter.from_yaml("config/providers.yaml")
-        self._ak = AKShareProvider(cache=self._cache, storage=self._storage)
-        self._yf = YFinanceProvider(cache=self._cache, storage=self._storage)
-        self._bs = BaostockProvider(cache=self._cache, storage=self._storage)
-        self._fred = FREDProvider(cache=self._cache, storage=self._storage)
+        self._ak = AKShareProvider(cache=self._cache)
+        self._yf = YFinanceProvider(cache=self._cache)
+        self._bs = BaostockProvider(cache=self._cache)
+        self._fred = FREDProvider(cache=self._cache)
         self._cninfo = CNINFOProvider(storage=self._storage)
         self._edgar = SECEDGARProvider(storage=self._storage)
         self._cg = CoinGeckoProvider(cache=self._cache)
@@ -84,9 +84,12 @@ class DataGateway:
         rkey: str, provider_fn, *args,
         date_col: str = "date",
         ttl: int = 86400,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        freshness_days: int = 1,
         **kwargs
     ) -> pd.DataFrame:
-        """读路径：Parquet 优先，未命中/过期则调 Provider 并持久化。
+        """读路径：Parquet 优先，未命中/过期则增量/全量调 Provider 并持久化。
 
         Args:
             asset/mkt/sym/dtype: Parquet 路径参数
@@ -95,27 +98,35 @@ class DataGateway:
             *args/**kwargs: Provider 方法参数
             date_col: 日期列名（用于判断新鲜度）
             ttl: API 缓存 TTL（秒）
+            start_date: 初始请求起始日期（可为 None，若 Persist 存在则自动增量）
+            end_date: 请求终止日期
+            freshness_days: 数据新鲜度阈值（天），last >= today - freshness_days 视为新鲜
         """
         existing = self._storage.load(asset, mkt, sym, dtype)
         if not existing.empty:
-            # Check freshness
-            for col in existing.columns:
-                if col.lower() in (date_col.lower(), "date", "trade_date", "日期"):
-                    dates = pd.to_datetime(existing[col])
-                    if hasattr(dates.iloc[0], "date"):
-                        latest = dates.max().date()
-                    else:
-                        latest = dates.max()
-                    if latest >= date.today() - timedelta(days=1):
-                        return existing
-                    break
+            _, last = self._storage.get_date_range(asset, mkt, sym, dtype)
+            if last and last >= date.today() - timedelta(days=freshness_days):
+                return existing
+            # Compute incremental start date from last_date + 1
+            if start_date is not None and last is not None:
+                next_day = last + timedelta(days=1)
+                if len(start_date) == 8 and start_date.isdigit():
+                    start_date = next_day.strftime("%Y%m%d")
+                else:
+                    start_date = next_day.strftime("%Y-%m-%d")
 
-        # Fetch fresh
-        df = self._try(rkey, provider_fn, *args, **kwargs)
+        # Build kwargs for provider call
+        call_kwargs = dict(kwargs)
+        if start_date is not None:
+            call_kwargs["start"] = start_date
+        if end_date is not None:
+            call_kwargs["end"] = end_date
+
+        df = self._try(rkey, provider_fn, *args, **call_kwargs)
         if df is not None and not df.empty:
             self._cache.set(
                 provider_fn.__self__.__class__.__name__,
-                provider_fn.__name__, df, *args, ttl=ttl, **kwargs
+                provider_fn.__name__, df, *args, ttl=ttl, **call_kwargs
             )
             self._storage.merge_and_save(df, asset, mkt, sym, dtype)
         return df if df is not None else existing
@@ -151,36 +162,39 @@ class DataGateway:
             # AKShare uses YYYYMMDD
             if force:
                 df = self._try(
-                    "_ak", self._ak.get_daily, symbol, start, end,
-                    dir_name=dir_name
+                    "_ak", self._ak.get_daily, symbol, start=start, end=end
                 )
             else:
                 df = self._read_or_fetch(
                     "stock", "cn", dir_name, "daily",
-                    "akshare", self._ak.get_daily, symbol, start, end,
-                    dir_name=dir_name,
+                    "akshare", self._ak.get_daily, symbol,
+                    start_date=start, end_date=end,
                 )
             # Fallback chain: AKShare → yfinance → Baostock
             if df is None or df.empty:
                 df = self._try(
-                    "_yf", self._yf.get_daily, symbol, "cn", start_fmt, end_fmt,
-                    store_symbol=dir_name
+                    "_yf", self._yf.get_daily, symbol, "cn",
+                    start=start_fmt, end=end_fmt
                 )
+                if df is not None and not df.empty:
+                    self._storage.merge_and_save(df, "stock", "cn", dir_name, "daily")
             if df is None or df.empty:
                 df = self._try(
-                    "_bs", self._bs.get_daily, symbol, start, end,
-                    store_symbol=dir_name
+                    "_bs", self._bs.get_daily, symbol, start=start, end=end
                 )
+                if df is not None and not df.empty:
+                    self._storage.merge_and_save(df, "stock", "cn", dir_name, "daily")
         else:
             if force:
                 df = self._try(
-                    "_yf", self._yf.get_daily, symbol, market.value, start_fmt, end_fmt
+                    "_yf", self._yf.get_daily, symbol, market.value,
+                    start=start_fmt, end=end_fmt
                 )
             else:
                 df = self._read_or_fetch(
                     "stock", market.value, dir_name, "daily",
-                    "yfinance", self._yf.get_daily, symbol, market.value, start_fmt, end_fmt,
-                    store_symbol=dir_name,
+                    "yfinance", self._yf.get_daily, symbol, market.value,
+                    start_date=start_fmt, end_date=end_fmt,
                 )
         return df if df is not None else pd.DataFrame()
 
@@ -212,6 +226,7 @@ class DataGateway:
             df = self._read_or_fetch(
                 "index", "cn", symbol, "daily",
                 "akshare", self._ak.get_index_daily, symbol,
+                start_date="20100101",
             )
         return df if df is not None else pd.DataFrame()
 
@@ -232,11 +247,12 @@ class DataGateway:
         results = {}
         for m, s in targets:
             if force:
-                df = self._try("_yf", self._yf.get_index, s, m)
+                df = self._try("_yf", self._yf.get_index_daily, s, m)
             else:
                 df = self._read_or_fetch(
                     "index", m, s, "daily",
-                    "yfinance", self._yf.get_index, s, m,
+                    "yfinance", self._yf.get_index_daily, s, m,
+                    start_date="2010-01-01",
                 )
             if df is not None and not df.empty:
                 results[f"{m}_{s}"] = df
@@ -289,7 +305,12 @@ class DataGateway:
         美股: yfinance。
         """
         if market == Market.CN:
-            return self._ak.get_financials(symbol)
+            dir_name = stock_dir(symbol)
+            result = self._ak.get_financials(symbol)
+            for name, df in result.items():
+                if df is not None and not df.empty:
+                    self._storage.save(df, "stock", "cn", dir_name, name)
+            return result
         if market == Market.HK:
             result = self._ak.get_hk_financials(symbol)
             if result:
@@ -305,7 +326,11 @@ class DataGateway:
         美股: yfinance。
         """
         if market == Market.CN:
-            return self._ak.get_dividends(symbol)
+            dir_name = stock_dir(symbol)
+            df = self._ak.get_dividends(symbol)
+            if df is not None and not df.empty:
+                self._storage.save(df, "stock", "cn", dir_name, "dividends")
+            return df
         if market == Market.HK:
             df = self._ak.get_hk_dividends(symbol)
             if df is not None and not df.empty:
@@ -396,36 +421,35 @@ class DataGateway:
             "shibor": {}, "lpr": {}, "unemployment": {},
         }
 
-        # CN data (AKShare)
-        for key, fn in [
-            ("cpi_yoy", self._ak.get_cpi),
-            ("ppi", self._ak.get_ppi),
-            ("pmi", self._ak.get_pmi),
-            ("gdp", self._ak.get_gdp_cn),
-            ("shibor", self._ak.get_shibor_latest),
-            ("lpr", self._ak.get_lpr),
-            ("fx_reserves", self._ak.get_fx_reserves),
-            ("unemployment", self._ak.get_unemployment_cn),
-            ("exports_yoy", self._ak.get_exports_yoy),
-            ("imports_yoy", self._ak.get_imports_yoy),
-            ("industrial_production", self._ak.get_industrial_production),
-            ("retail_sales", self._ak.get_retail_sales),
-            ("social_financing", self._ak.get_social_financing),
-            ("caixin_pmi", self._ak.get_caixin_pmi),
-            ("non_man_pmi", self._ak.get_non_man_pmi),
-            ("money_supply", self._ak.get_money_supply),
-            ("bond_yield", self._ak.get_bond_yield_cn),
-        ]:
+        # CN data (AKShare) — fetch + persist via _read_or_fetch
+        macro_sources = [
+            ("cpi_yoy",     self._ak.get_cpi,                   "macro", "cn", "cpi", "monthly", 45),
+            ("ppi",         self._ak.get_ppi,                   "macro", "cn", "ppi", "monthly", 45),
+            ("pmi",         self._ak.get_pmi,                   "macro", "cn", "pmi", "monthly", 45),
+            ("gdp",         self._ak.get_gdp_cn,                "macro", "cn", "gdp", "quarterly", 120),
+            ("shibor",      self._ak.get_shibor,                "macro", "cn", "shibor", "daily", 1),
+            ("lpr",         self._ak.get_lpr,                   "macro", "cn", "lpr", "monthly", 45),
+            ("fx_reserves", self._ak.get_fx_reserves,           "macro", "cn", "fx_reserves", "monthly", 45),
+            ("unemployment",self._ak.get_unemployment_cn,       "macro", "cn", "unemployment", "monthly", 45),
+            ("exports_yoy", self._ak.get_exports_yoy,           "macro", "cn", "exports_yoy", "monthly", 45),
+            ("imports_yoy", self._ak.get_imports_yoy,           "macro", "cn", "imports_yoy", "monthly", 45),
+            ("industrial_production", self._ak.get_industrial_production, "macro", "cn", "industrial_production", "monthly", 45),
+            ("retail_sales",self._ak.get_retail_sales,          "macro", "cn", "retail_sales", "monthly", 45),
+            ("social_financing", self._ak.get_social_financing, "macro", "cn", "social_financing", "monthly", 45),
+            ("caixin_pmi",  self._ak.get_caixin_pmi,            "macro", "cn", "caixin_pmi", "monthly", 45),
+            ("non_man_pmi", self._ak.get_non_man_pmi,           "macro", "cn", "non_man_pmi", "monthly", 45),
+            ("money_supply",self._ak.get_money_supply,          "macro", "cn", "money_supply", "monthly", 45),
+            ("bond_yield",  self._ak.get_bond_yield_cn,         "macro", "cn", "bond_yield", "daily", 5),
+        ]
+        for key, fn, asset, mkt, sym, dtype, freshness in macro_sources:
             try:
-                v = fn()
-                if v is None:
-                    continue
-                if isinstance(v, pd.DataFrame):
-                    result[key] = v
-                elif isinstance(v, dict):
-                    result[key] = v
-                elif isinstance(v, (int, float)):
-                    result[key] = v
+                df = self._read_or_fetch(
+                    asset, mkt, sym, dtype,
+                    "akshare", fn,
+                    freshness_days=freshness,
+                )
+                if df is not None and not df.empty:
+                    result[key] = df
             except Exception:
                 pass
 
@@ -448,11 +472,11 @@ class DataGateway:
         # LPR
         if "lpr" in result and isinstance(result["lpr"], pd.DataFrame):
             lpr_dict = {}
-            for col, key in [("LPR1Y", "1Y"), ("LPR5Y", "5Y")]:
+            for col, lpr_key in [("LPR1Y", "1Y"), ("LPR5Y", "5Y")]:
                 if col in result["lpr"].columns:
                     for v in reversed(result["lpr"][col].tolist()):
                         if pd.notna(v):
-                            lpr_dict[key] = float(v)
+                            lpr_dict[lpr_key] = float(v)
                             break
             result["lpr"] = lpr_dict
 
@@ -469,11 +493,11 @@ class DataGateway:
         if "money_supply" in result and isinstance(result["money_supply"], pd.DataFrame):
             m2_col = "货币和准货币(M2)-同比增长"
             m1_col = "货币(M1)-同比增长"
-            for col, key in [(m2_col, "m2_growth"), (m1_col, "m1_growth")]:
+            for col, m_key in [(m2_col, "m2_growth"), (m1_col, "m1_growth")]:
                 if col in result["money_supply"].columns:
                     for v in reversed(result["money_supply"][col].tolist()):
                         if pd.notna(v):
-                            result[key] = float(v)
+                            result[m_key] = float(v)
                             break
             del result["money_supply"]
 
@@ -533,11 +557,15 @@ class DataGateway:
         except Exception:
             pass
 
-        # DXY (YFinance)
+        # DXY (YFinance) — persisted via _read_or_fetch
         try:
-            dxy = self._yf.get_dxy_current()
-            if dxy:
-                result["dxy"] = dxy
+            dxy_df = self._read_or_fetch(
+                "forex", "global", "DXY", "daily",
+                "yfinance", self._yf.get_dxy,
+                start_date="2010-01-01", freshness_days=7,
+            )
+            if dxy_df is not None and not dxy_df.empty and "close" in dxy_df.columns:
+                result["dxy"] = float(dxy_df["close"].iloc[-1])
         except Exception:
             pass
 
@@ -585,18 +613,91 @@ class DataGateway:
 
     def get_flow(self) -> dict[str, pd.DataFrame]:
         """沪深港通北向/南向，AKShare。"""
-        north = self._ak.get_northbound()
-        south = self._ak.get_southbound()
+        north = self._read_or_fetch(
+            "flow", "cn", "northbound", "daily",
+            "akshare", self._ak.get_northbound,
+            start_date="20100101",
+        )
+        south = self._read_or_fetch(
+            "flow", "cn", "southbound", "daily",
+            "akshare", self._ak.get_southbound,
+            start_date="20100101",
+        )
         return {"northbound": north, "southbound": south}
 
     # ── 加密货币 ───────────────────────────────────────
 
     def get_crypto(self, symbol: str) -> pd.DataFrame:
         """加密货币，YFinance 优先，降级 CoinGecko。"""
-        df = self._try("_yf", self._yf.get_crypto_daily, symbol, "usd", "2020-01-01")
+        sym = symbol.upper()
+        df = self._read_or_fetch(
+            "crypto", "global", sym, "daily",
+            "yfinance", self._yf.get_crypto_daily, symbol,
+            start_date="2015-01-01",
+        )
         if df is None or df.empty:
             df = self._try("_cg", self._cg.get_historical, symbol, days=365)
         return df if df is not None else pd.DataFrame()
+
+    # ── 外汇 / 商品 / 市场概览 ──────────────────────────────
+
+    def get_forex_daily(self, pair: str, force: bool = False) -> pd.DataFrame:
+        """外汇日线 OHLCV."""
+        mkt = "global"
+        sym = pair.upper()
+        if force:
+            df = self._force_fetch("forex", mkt, sym, "daily", "yfinance",
+                                   self._yf.get_forex_daily, pair)
+        else:
+            df = self._read_or_fetch(
+                "forex", mkt, sym, "daily",
+                "yfinance", self._yf.get_forex_daily, pair,
+                start_date="2010-01-01",
+            )
+        return df if df is not None else pd.DataFrame()
+
+    def get_commodity_daily(self, symbol: str, force: bool = False) -> pd.DataFrame:
+        """商品日线 OHLCV."""
+        mkt = "global"
+        sym = symbol.upper()
+        if force:
+            df = self._force_fetch("commodity", mkt, sym, "daily", "yfinance",
+                                   self._yf.get_commodity_daily, symbol)
+        else:
+            df = self._read_or_fetch(
+                "commodity", mkt, sym, "daily",
+                "yfinance", self._yf.get_commodity_daily, symbol,
+                start_date="2010-01-01",
+            )
+        return df if df is not None else pd.DataFrame()
+
+    def get_hk_stock_spot(self) -> pd.DataFrame:
+        """港股实时快照."""
+        return self._ak.get_hk_stock_spot()
+
+    def get_us_stock_spot(self) -> pd.DataFrame:
+        """美股实时快照."""
+        return self._ak.get_us_stock_spot()
+
+    def get_forex_spot(self) -> pd.DataFrame:
+        """外汇实时快照."""
+        return self._ak.get_forex_spot()
+
+    def get_futures_spot(self) -> pd.DataFrame:
+        """期货实时快照."""
+        return self._ak.get_futures_spot()
+
+    def get_crypto_spot(self) -> pd.DataFrame:
+        """加密货币实时快照."""
+        return self._ak.get_crypto_spot()
+
+    def get_crypto_market_data(self, symbol: str) -> Optional[dict]:
+        """加密货币详细市场数据."""
+        return self._cg.get_market_data(symbol)
+
+    def get_yield_curve_history(self) -> pd.DataFrame:
+        """美国国债收益率曲线历史."""
+        return self._fred.get_yield_curve_history()
 
     # ── 工具 ─────────────────────────────────────────
 
