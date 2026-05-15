@@ -287,9 +287,9 @@ class YFinanceProvider:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
 
-        existing = self._storage.load("forex", "global", "dxy", "daily")
+        existing = self._storage.load("forex", "global", "DXY", "daily")
         if not existing.empty:
-            _, last_date = self._storage.get_date_range("forex", "global", "dxy", "daily")
+            _, last_date = self._storage.get_date_range("forex", "global", "DXY", "daily")
             if last_date and last_date >= date.today() - timedelta(days=7):
                 return existing
 
@@ -304,7 +304,7 @@ class YFinanceProvider:
         if df is None or df.empty:
             return existing if not existing.empty else pd.DataFrame()
 
-        return self._storage.merge_and_save(df, "forex", "global", "dxy", "daily")
+        return self._storage.merge_and_save(df, "forex", "global", "DXY", "daily")
 
     def get_dxy_current(self) -> Optional[float]:
         """Get current DXY level (most recent value)."""
@@ -316,7 +316,7 @@ class YFinanceProvider:
             pass
         # Fallback: try to read from existing parquet
         try:
-            df = self._storage.load("forex", "global", "dxy", "daily")
+            df = self._storage.load("forex", "global", "DXY", "daily")
             if not df.empty and "close" in df.columns:
                 return float(df.iloc[-1]["close"])
         except Exception:
