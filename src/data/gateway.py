@@ -69,7 +69,7 @@ class DataGateway:
 
         provider_attr: 实例属性名 (如 "_ak", "_yf")，用于查限速配置。
         """
-        rkey = self._RATE_KEY.get(provider_attr, "default")
+        rkey = self._RATE_KEY.get(provider_attr, provider_attr)
         for attempt in self._rate_limiter.attempts(rkey):
             try:
                 result = fn(*args, **kwargs)
@@ -131,11 +131,11 @@ class DataGateway:
             self._storage.merge_and_save(df, asset, mkt, sym, dtype)
         return df if df is not None else existing
 
-    def _force_fetch(
+    def _fetch_and_save(
         self, asset: str, mkt: str, sym: str, dtype: str,
         rkey: str, provider_fn, *args, **kwargs
     ) -> pd.DataFrame:
-        """强制刷新：跳过 Parquet，直接调 Provider 并持久化。"""
+        """调 Provider 抓取并持久化到 Parquet。不检查存量。"""
         df = self._try(rkey, provider_fn, *args, **kwargs)
         if df is not None and not df.empty:
             self._storage.merge_and_save(df, asset, mkt, sym, dtype)
@@ -161,8 +161,9 @@ class DataGateway:
         if market == Market.CN:
             # AKShare uses YYYYMMDD
             if force:
-                df = self._try(
-                    "_ak", self._ak.get_daily, symbol, start=start, end=end
+                df = self._fetch_and_save(
+                    "stock", "cn", dir_name, "daily",
+                    "_ak", self._ak.get_daily, symbol, start=start, end=end,
                 )
             else:
                 df = self._read_or_fetch(
@@ -172,23 +173,22 @@ class DataGateway:
                 )
             # Fallback chain: AKShare → yfinance → Baostock
             if df is None or df.empty:
-                df = self._try(
+                df = self._fetch_and_save(
+                    "stock", "cn", dir_name, "daily",
                     "_yf", self._yf.get_daily, symbol, "cn",
-                    start=start_fmt, end=end_fmt
+                    start=start_fmt, end=end_fmt,
                 )
-                if df is not None and not df.empty:
-                    self._storage.merge_and_save(df, "stock", "cn", dir_name, "daily")
             if df is None or df.empty:
-                df = self._try(
-                    "_bs", self._bs.get_daily, symbol, start=start, end=end
+                df = self._fetch_and_save(
+                    "stock", "cn", dir_name, "daily",
+                    "_bs", self._bs.get_daily, symbol, start=start, end=end,
                 )
-                if df is not None and not df.empty:
-                    self._storage.merge_and_save(df, "stock", "cn", dir_name, "daily")
         else:
             if force:
-                df = self._try(
+                df = self._fetch_and_save(
+                    "stock", market.value, dir_name, "daily",
                     "_yf", self._yf.get_daily, symbol, market.value,
-                    start=start_fmt, end=end_fmt
+                    start=start_fmt, end=end_fmt,
                 )
             else:
                 df = self._read_or_fetch(
@@ -221,7 +221,10 @@ class DataGateway:
 
     def _fetch_cn_index(self, symbol: str, force: bool) -> pd.DataFrame:
         if force:
-            df = self._try("_ak", self._ak.get_index_daily, symbol)
+            df = self._fetch_and_save(
+                "index", "cn", symbol, "daily",
+                "_ak", self._ak.get_index_daily, symbol,
+            )
         else:
             df = self._read_or_fetch(
                 "index", "cn", symbol, "daily",
@@ -247,7 +250,10 @@ class DataGateway:
         results = {}
         for m, s in targets:
             if force:
-                df = self._try("_yf", self._yf.get_index_daily, s, m)
+                df = self._fetch_and_save(
+                    "index", m, s, "daily",
+                    "yfinance", self._yf.get_index_daily, s, m,
+                )
             else:
                 df = self._read_or_fetch(
                     "index", m, s, "daily",
@@ -637,7 +643,7 @@ class DataGateway:
             df = self._try("_cg", self._cg.get_historical_ohlcv, sym)
             return df if df is not None else pd.DataFrame()
         if force:
-            df = self._force_fetch("crypto", "global", sym, "daily", "yfinance",
+            df = self._fetch_and_save("crypto", "global", sym, "daily", "yfinance",
                                    self._yf.get_crypto_daily, symbol, start, end)
         else:
             df = self._read_or_fetch(
@@ -656,7 +662,7 @@ class DataGateway:
         end = end or date.today().strftime("%Y-%m-%d")
         sym = pair.upper()
         if force:
-            df = self._force_fetch("forex", "global", sym, "daily", "yfinance",
+            df = self._fetch_and_save("forex", "global", sym, "daily", "yfinance",
                                    self._yf.get_forex_daily, pair, start, end)
         else:
             df = self._read_or_fetch(
@@ -671,7 +677,7 @@ class DataGateway:
         end = end or date.today().strftime("%Y-%m-%d")
         sym = symbol.upper()
         if force:
-            df = self._force_fetch("commodity", "global", sym, "daily", "yfinance",
+            df = self._fetch_and_save("commodity", "global", sym, "daily", "yfinance",
                                    self._yf.get_commodity_daily, symbol, start, end)
         else:
             df = self._read_or_fetch(
