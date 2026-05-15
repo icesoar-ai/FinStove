@@ -13,7 +13,10 @@ console = Console()
 @click.command()
 @click.argument("ticker")
 @click.option("--years", default="", help="过滤年份，逗号分隔 (如 2021,2022,2023)")
-def financials(ticker: str, years: str):
+@click.option("--period", default="all",
+              type=click.Choice(["all", "annual", "quarterly"]),
+              help="显示周期，默认 all")
+def financials(ticker: str, years: str, period: str):
     """A股三大财务报表 — 资产负债表 / 利润表 / 现金流量表 / 主要财务指标.
 
     数据源: AKShare (同花顺)，需先拉取数据: /fetch-stock <TICKER> financials
@@ -59,7 +62,7 @@ def financials(ticker: str, years: str):
         import akshare as ak
         fin = ak.stock_financial_abstract_ths(symbol=symbol)
         fin["报告期_dt"] = pd.to_datetime(fin["报告期"])
-        recent = fin[fin["报告期_dt"] >= "2021-01-01"].drop(columns=["报告期_dt"])
+        recent = fin.drop(columns=["报告期_dt"])
         s.save(recent, "stock", "cn", dir_name, "financials")
         console.print(f"[green]财务摘要: {len(recent)} 期[/green]")
 
@@ -69,7 +72,7 @@ def financials(ticker: str, years: str):
             recent = recent[recent["报告期"].str[:4].isin([str(y) for y in year_list])]
 
         if not recent.empty:
-            _display_financials(recent, symbol)
+            _display_financials(recent, symbol, period)
 
     except Exception as e:
         console.print(f"[red]财务摘要获取失败: {e}[/red]")
@@ -97,26 +100,31 @@ def financials(ticker: str, years: str):
         console.print("[dim]分红数据不可用[/dim]")
 
 
-def _display_financials(df, symbol: str):
-    """Display key annual financial metrics."""
-    # Filter annual data only
-    annual = df[df["报告期"].str.endswith("-12-31")].sort_values("报告期")
+def _display_financials(df, symbol: str, period: str = "all"):
+    """Display financial metrics."""
+    if period == "annual":
+        filtered = df[df["报告期"].str.endswith("-12-31")].sort_values("报告期")
+    elif period == "quarterly":
+        filtered = df[~df["报告期"].str.endswith("-12-31")].sort_values("报告期")
+    else:
+        filtered = df.sort_values("报告期")
 
-    if annual.empty:
+    if filtered.empty:
         return
 
-    table = Table(title=f"{symbol} 年度财务摘要")
-    table.add_column("年份")
+    period_label = {"annual": "年度", "quarterly": "季度", "all": "全期"}[period]
+    table = Table(title=f"{symbol} {period_label}财务摘要")
+    table.add_column("报告期")
     key_cols = ["净利润", "营业总收入", "基本每股收益", "每股净资产", "净资产收益率", "资产负债率"]
     for col in key_cols:
-        if col in annual.columns:
+        if col in filtered.columns:
             table.add_column(col, justify="right")
 
-    for _, row in annual.iterrows():
-        year = row["报告期"][:4]
-        vals = [year]
+    for _, row in filtered.iterrows():
+        report_period = row["报告期"]
+        vals = [report_period]
         for col in key_cols:
-            if col in annual.columns:
+            if col in filtered.columns:
                 v = row[col]
                 if isinstance(v, (int, float)):
                     if abs(v) >= 1e8:
