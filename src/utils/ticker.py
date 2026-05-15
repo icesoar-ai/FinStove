@@ -96,7 +96,9 @@ def stock_dir(code: str) -> str:
     if code.isdigit():
         if len(code) <= 5:
             return f"{code}.HK"
-        suffix = "SH" if code[0] in ("6", "8", "9") else "SZ"
+        # CN: 6xx/8xx/9xx/5xx → SH; 0xx/3xx/1xx → SZ
+        # 51xxxx = Shanghai ETF; 15xxxx = Shenzhen ETF
+        suffix = "SH" if code[0] in ("5", "6", "8", "9") else "SZ"
         return f"{code}.{suffix}"
     return f"{code}.US"
 
