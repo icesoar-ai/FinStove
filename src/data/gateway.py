@@ -289,8 +289,7 @@ class DataGateway:
         美股: yfinance。
         """
         if market == Market.CN:
-            dir_name = stock_dir(symbol)
-            return self._ak.get_financials(symbol, dir_name=dir_name)
+            return self._ak.get_financials(symbol)
         if market == Market.HK:
             result = self._ak.get_hk_financials(symbol)
             if result:
@@ -306,8 +305,7 @@ class DataGateway:
         美股: yfinance。
         """
         if market == Market.CN:
-            dir_name = stock_dir(symbol)
-            return self._ak.get_dividends(symbol, dir_name=dir_name)
+            return self._ak.get_dividends(symbol)
         if market == Market.HK:
             df = self._ak.get_hk_dividends(symbol)
             if df is not None and not df.empty:
