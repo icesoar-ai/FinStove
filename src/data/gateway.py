@@ -10,9 +10,12 @@ CLI 命令只调 DataGateway，不感知 Provider 细节。
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 
@@ -306,6 +309,7 @@ class DataGateway:
         """
         if market == Market.CN:
             rkey = "cninfo"
+            last_err = None
             for attempt in self._rate_limiter.attempts(rkey):
                 try:
                     result = self._cninfo.download_reports(
@@ -313,8 +317,10 @@ class DataGateway:
                     )
                     attempt.success()
                     return result
-                except Exception:
+                except Exception as e:
+                    last_err = e
                     attempt.failure()
+            logger.warning("CNINFO download_reports 全部重试失败: %s", last_err)
             return []
         return self._edgar.download_10k(symbol)
 
