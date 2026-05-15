@@ -118,8 +118,8 @@ class AKShareProvider:
             try:
                 df = self._ak.stock_financial_abstract_ths(symbol)
                 if df is not None and not df.empty:
-                    self._storage.save(df, "stock", "cn", store_symbol, "income")
-                    result["income"] = df
+                    self._storage.save(df, "stock", "cn", store_symbol, "financials_summary")
+                    result["financials_summary"] = df
             except Exception:
                 pass
 
