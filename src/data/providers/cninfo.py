@@ -21,6 +21,18 @@ class CNINFOProvider:
     PDF_BASE = "http://static.cninfo.com.cn"
     TIMEOUT = 30
 
+    CATEGORY_MAP = {
+        "annual":       "category_ndbg_szsh",
+        "semi_annual":  "category_bndbg_szsh",
+        "quarterly":    "category_yjdbg_szsh",
+    }
+
+    TITLE_KEYWORDS = {
+        "annual":       "年度报告",
+        "semi_annual":  "半年度报告",
+        "quarterly":    "季度报告",
+    }
+
     def __init__(self, storage: Optional[ParquetStorage] = None):
         self._storage = storage or ParquetStorage()
 
@@ -30,13 +42,14 @@ class CNINFOProvider:
             return f"{symbol},gssz{padded}"
         return f"{symbol},gssh{padded}"
 
-    def _fetch_page(self, stock_id: str, page: int, page_size: int = 50) -> dict:
+    def _fetch_page(self, stock_id: str, page: int, page_size: int = 50,
+                    category: str = "category_ndbg_szsh") -> dict:
         data = {
             "pageNum": page, "pageSize": page_size,
             "column": "szse", "tabName": "fulltext",
             "plate": "", "stock": stock_id,
             "searchkey": "", "secid": "",
-            "category": "category_ndbg_szsh",
+            "category": category,
             "trade": "", "seDate": "",
             "sortName": "", "sortType": "",
             "isHLtitle": "true",
@@ -88,35 +101,62 @@ class CNINFOProvider:
 
     # ---- Listing ----
 
-    def list_reports(self, symbol: str) -> list[dict]:
-        """List all annual reports (年报 + 年报摘要) for a stock."""
+    def list_reports(self, symbol: str,
+                     report_types: Optional[list[str]] = None,
+                     since_year: Optional[int] = None) -> list[dict]:
+        """List reports (annual/semi-annual/quarterly) for a stock.
+
+        Args:
+            symbol: Stock code, e.g. "000002".
+            report_types: List of report type keys ("annual", "semi_annual",
+                          "quarterly"). Defaults to all three.
+            since_year: If set, only return reports with year >= since_year.
+        """
+        if report_types is None:
+            report_types = ["annual", "semi_annual", "quarterly"]
+
         stock_id = self._resolve_org_id(symbol)
-        resp = self._fetch_page(stock_id, 1, 50)
-        announcements = resp.get("announcements") or []
-        results = []
+        results: list[dict] = []
+        seen: set[tuple[int, str]] = set()
 
-        for a in announcements:
-            title = a.get("announcementTitle", "")
-            adjunct = a.get("adjunctUrl", "")
-            if not adjunct:
-                continue
-            if "年度报告" not in title:
-                continue
+        for rtype in report_types:
+            category = self.CATEGORY_MAP[rtype]
+            keyword = self.TITLE_KEYWORDS[rtype]
+            resp = self._fetch_page(stock_id, 1, 50, category=category)
+            announcements = resp.get("announcements") or []
 
-            year_match = re.search(r"(\d{4})", title)
-            year = int(year_match.group(1)) if year_match else 0
-            is_summary = "摘要" in title
-            kind = "summary" if is_summary else "full"
-            results.append({
-                "title": title,
-                "year": year,
-                "kind": kind,
-                "pdf_url": f"{self.PDF_BASE}/{adjunct}",
-                "announcement_id": a.get("announcementId", ""),
-                "publish_date": self._parse_time(a.get("announcementTime", "")),
-            })
+            for a in announcements:
+                title = a.get("announcementTitle", "")
+                adjunct = a.get("adjunctUrl", "")
+                if not adjunct:
+                    continue
+                if keyword not in title:
+                    continue
 
-        return sorted(results, key=lambda x: (x["year"], x["kind"]), reverse=True)
+                year_match = re.search(r"(\d{4})", title)
+                year = int(year_match.group(1)) if year_match else 0
+
+                if since_year is not None and year < since_year:
+                    continue
+
+                dedup_key = (year, rtype)
+                if dedup_key in seen:
+                    continue
+                seen.add(dedup_key)
+
+                is_summary = "摘要" in title
+                kind = "summary" if is_summary else "full"
+                results.append({
+                    "title": title,
+                    "year": year,
+                    "kind": kind,
+                    "report_type": rtype,
+                    "pdf_url": f"{self.PDF_BASE}/{adjunct}",
+                    "announcement_id": a.get("announcementId", ""),
+                    "publish_date": self._parse_time(a.get("announcementTime", "")),
+                })
+
+        return sorted(results, key=lambda x: (x["year"], x["report_type"]), reverse=True)
 
     # ---- Download ----
 
@@ -153,17 +193,17 @@ class CNINFOProvider:
 
     # ---- Public API ----
 
-    def download_reports(self, symbol: str, years: Optional[list[int]] = None) -> list[dict]:
-        """Download annual reports (full + summary) for a stock.
+    def download_reports(self, symbol: str,
+                         since_year: Optional[int] = None,
+                         report_types: Optional[list[str]] = None) -> list[dict]:
+        """Download reports for a stock, with optional year/type filtering.
 
         Filenames use the original CNINFO announcement title directly.
         """
         from src.utils.ticker import stock_dir
 
-        reports = self.list_reports(symbol)
-
-        if years:
-            reports = [r for r in reports if r["year"] in years]
+        reports = self.list_reports(symbol, report_types=report_types,
+                                    since_year=since_year)
 
         dir_name = stock_dir(symbol)
         results = []
