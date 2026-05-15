@@ -33,10 +33,9 @@ def reports(ticker: str, report_type: str, years: str):
 
     # Parse years or default to last 2 years
     if years:
-        year_list = [int(y.strip()) for y in years.split(",") if y.strip()]
-        since_year = min(year_list) if year_list else date.today().year - 1
+        parsed = [int(y.strip()) for y in years.split(",") if y.strip()]
+        since_year = min(parsed) if parsed else date.today().year - 1
     else:
-        year_list = None
         since_year = date.today().year - 1
 
     # Parse report types
