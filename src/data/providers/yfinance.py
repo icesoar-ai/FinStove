@@ -1,11 +1,10 @@
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 import pandas as pd
 
 from ..cache import DataCache
 from ..normalizer import standardize
-from ..storage import ParquetStorage
 
 SUFFIX_MAP = {
     "cn": {"stock": ".SS", "index": ".SS"},
@@ -122,9 +121,8 @@ CRYPTO_NAMES = {
 
 
 class YFinanceProvider:
-    def __init__(self, cache: Optional[DataCache] = None, storage: Optional[ParquetStorage] = None):
+    def __init__(self, cache: Optional[DataCache] = None):
         self._cache = cache
-        self._storage = storage or ParquetStorage()
         import yfinance as yf
         self._yf = yf
 
@@ -154,34 +152,17 @@ class YFinanceProvider:
             df = df.rename(columns={"adj_close": "adjusted_close"})
         return standardize(df) if df is not None and not df.empty else pd.DataFrame()
 
-    # ---- Stock OHLCV (with Parquet incremental) ----
+    # ---- Stock OHLCV ----
 
     def get_daily(self, symbol: str, market: str = "us", start: str = "2010-01-01",
-                  end: Optional[str] = None,
-                  store_symbol: Optional[str] = None) -> pd.DataFrame:
-        """Fetch daily OHLCV. store_symbol overrides the Parquet directory name."""
+                  end: Optional[str] = None) -> pd.DataFrame:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
-
-        store_sym = store_symbol or symbol
-
-        existing = self._storage.load("stock", market, store_sym, "daily")
-        if not existing.empty:
-            _, last_date = self._storage.get_date_range("stock", market, store_sym, "daily")
-            if last_date:
-                start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
-                if start >= end:
-                    return existing
-
         yf_symbol = self._build_symbol(symbol, market, "stock")
         ticker = self._yf.Ticker(yf_symbol)
         df = ticker.history(start=start, end=end)
         df = self._normalize_df(df)
-
-        if df is None or df.empty:
-            return existing if not existing.empty else pd.DataFrame()
-
-        return self._storage.merge_and_save(df, "stock", market, store_sym, "daily")
+        return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Info ----
 
@@ -248,63 +229,26 @@ class YFinanceProvider:
 
     def get_index_daily(self, symbol: str, market: str = "us", start: str = "2010-01-01",
                         end: Optional[str] = None) -> pd.DataFrame:
-        """Fetch index daily OHLCV with Parquet persistence.
-
-        Storage path: data/index/{market}/{symbol}/daily.parquet
-        """
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
-
-        existing = self._storage.load("index", market, symbol, "daily")
-        if not existing.empty:
-            _, last_date = self._storage.get_date_range("index", market, symbol, "daily")
-            if last_date and last_date >= date.today() - timedelta(days=1):
-                return existing
-            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
-            if start >= end:
-                return existing
-
         yf_symbol = self._build_symbol(symbol, market, "index")
         ticker = self._yf.Ticker(yf_symbol)
         df = ticker.history(start=start, end=end)
         df = self._normalize_df(df)
-
-        if df is None or df.empty:
-            return existing if not existing.empty else pd.DataFrame()
-
-        return self._storage.merge_and_save(df, "index", market, symbol, "daily")
+        return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- DXY (US Dollar Index) ----
 
     def get_dxy(self, start: str = "2010-01-01", end: Optional[str] = None) -> pd.DataFrame:
-        """Fetch US Dollar Index (DXY) historical data.
-
-        DXY measures USD against a basket of 6 major currencies.
-        Ticker: DX-Y.NYB (ICE Futures U.S.)
-
-        Stores to: data/forex/dxy.parquet
-        """
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
-
-        existing = self._storage.load("forex", "global", "DXY", "daily")
-        if not existing.empty:
-            _, last_date = self._storage.get_date_range("forex", "global", "DXY", "daily")
-            if last_date and last_date >= date.today() - timedelta(days=7):
-                return existing
-
         try:
-            # DX-Y.NYB is the ICE futures ticker; fallback to USDX if available
             df = self.get_generic("DX-Y.NYB", start, end)
             if df is None or df.empty:
                 df = self.get_generic("USDX", start, end)
         except Exception:
             df = pd.DataFrame()
-
-        if df is None or df.empty:
-            return existing if not existing.empty else pd.DataFrame()
-
-        return self._storage.merge_and_save(df, "forex", "global", "DXY", "daily")
+        return df if df is not None and not df.empty else pd.DataFrame()
 
     def get_dxy_current(self) -> Optional[float]:
         """Get current DXY level (most recent value)."""
@@ -313,115 +257,47 @@ class YFinanceProvider:
             if not df.empty and "close" in df.columns:
                 return float(df.iloc[-1]["close"])
         except Exception:
-            pass
-        # Fallback: try to read from existing parquet
-        try:
-            df = self._storage.load("forex", "global", "DXY", "daily")
-            if not df.empty and "close" in df.columns:
-                return float(df.iloc[-1]["close"])
-        except Exception:
-            pass
+            return None
         return None
 
     # ---- Commodity Daily (with Parquet incremental) ----
 
     def get_commodity_daily(self, symbol: str, start: str = "2010-01-01",
                            end: Optional[str] = None) -> pd.DataFrame:
-        """Fetch commodity futures daily OHLCV with Parquet persistence.
-
-        Storage path: data/commodity/global/{symbol}/daily.parquet
-        Commodity futures are continuous front-month contracts (e.g. GC=F).
-        """
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
-
         ticker = COMMODITY_TICKERS.get(symbol.upper(), f"{symbol.upper()}=F")
-
-        existing = self._storage.load("commodity", "global", symbol.upper(), "daily")
-        if not existing.empty:
-            _, last_date = self._storage.get_date_range("commodity", "global", symbol.upper(), "daily")
-            if last_date and last_date >= date.today() - timedelta(days=1):
-                return existing
-            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
-            if start >= end:
-                return existing
-
         try:
             df = self.get_generic(ticker, start, end)
         except Exception:
             df = pd.DataFrame()
-
-        if df is None or df.empty:
-            return existing if not existing.empty else pd.DataFrame()
-
-        return self._storage.merge_and_save(df, "commodity", "global", symbol.upper(), "daily")
+        return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Forex Daily (with Parquet incremental) ----
 
     def get_forex_daily(self, pair: str, start: str = "2010-01-01",
                         end: Optional[str] = None) -> pd.DataFrame:
-        """Fetch forex pair daily OHLCV with Parquet persistence.
-
-        Storage path: data/forex/global/{pair}/daily.parquet
-        """
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
-
         ticker = FOREX_PAIRS.get(pair.upper(), f"{pair.upper()}=X")
-
-        existing = self._storage.load("forex", "global", pair.upper(), "daily")
-        if not existing.empty:
-            _, last_date = self._storage.get_date_range("forex", "global", pair.upper(), "daily")
-            if last_date and last_date >= date.today() - timedelta(days=1):
-                return existing
-            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
-            if start >= end:
-                return existing
-
         try:
             df = self.get_generic(ticker, start, end)
         except Exception:
             df = pd.DataFrame()
-
-        if df is None or df.empty:
-            return existing if not existing.empty else pd.DataFrame()
-
-        return self._storage.merge_and_save(df, "forex", "global", pair.upper(), "daily")
+        return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Crypto Daily (with Parquet incremental) ----
 
     def get_crypto_daily(self, symbol: str, start: str = "2015-01-01",
                          end: Optional[str] = None) -> pd.DataFrame:
-        """Fetch cryptocurrency daily OHLCV with Parquet persistence.
-
-        Uses Yahoo Finance as data source (faster, no rate limit).
-        For market cap data, use CoinGeckoProvider instead.
-
-        Storage path: data/crypto/global/{symbol}/daily.parquet
-        """
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
-
         ticker = CRYPTO_TICKERS.get(symbol.upper(), f"{symbol.upper()}-USD")
-
-        existing = self._storage.load("crypto", "global", symbol.upper(), "daily")
-        if not existing.empty:
-            _, last_date = self._storage.get_date_range("crypto", "global", symbol.upper(), "daily")
-            if last_date and last_date >= date.today() - timedelta(days=1):
-                return existing
-            start = (last_date + timedelta(days=1)).strftime("%Y-%m-%d")
-            if start >= end:
-                return existing
-
         try:
             df = self.get_generic(ticker, start, end)
         except Exception:
             df = pd.DataFrame()
-
-        if df is None or df.empty:
-            return existing if not existing.empty else pd.DataFrame()
-
-        return self._storage.merge_and_save(df, "crypto", "global", symbol.upper(), "daily")
+        return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Intraday (minute bars) ----
 
