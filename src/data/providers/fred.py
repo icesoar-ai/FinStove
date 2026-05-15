@@ -3,14 +3,12 @@
 Requires free API key from https://fred.stlouisfed.org/docs/api/api_key.html
 Set via environment variable: FRED_API_KEY=your_key
 """
-from datetime import date, timedelta
 from typing import Optional
 import os
 
 import pandas as pd
 
 from ..cache import DataCache
-from ..storage import ParquetStorage
 
 
 # FRED 系列 ID 映射
@@ -45,45 +43,14 @@ FRED_SERIES = {
     "LEI": "USLEI",  # 领先经济指数 (月)
 }
 
-# FRED series -> Parquet storage key: (asset_type, market, symbol, data_type)
-FRED_STORAGE_KEYS = {
-    "FEDFUNDS": ("macro", "us", "fed_funds_rate", "monthly"),
-    "CPIAUCSL": ("macro", "us", "cpi", "monthly"),
-    "CPILFESL": ("macro", "us", "core_cpi", "monthly"),
-    "GDP": ("macro", "us", "gdp", "quarterly"),
-    "GDPYOY": ("macro", "us", "gdp_yoy", "quarterly"),
-    "UNRATE": ("macro", "us", "unemployment", "monthly"),
-    "PAYEMS": ("macro", "us", "nonfarm_payrolls", "monthly"),
-    "DGS30": ("macro", "us", "treasury_30y", "daily"),
-    "DGS10": ("macro", "us", "treasury_10y", "daily"),
-    "DGS5": ("macro", "us", "treasury_5y", "daily"),
-    "DGS2": ("macro", "us", "treasury_2y", "daily"),
-    "DGS1": ("macro", "us", "treasury_1y", "daily"),
-    "DGS3MO": ("macro", "us", "treasury_3m", "daily"),
-    "M1SL": ("macro", "us", "m1", "weekly"),
-    "M2SL": ("macro", "us", "m2", "weekly"),
-    "NAPM": ("macro", "us", "pmi", "monthly"),
-    "NAPMSMI": ("macro", "us", "pmi_services", "monthly"),
-    "UMCSENT": ("macro", "us", "consumer_sentiment", "monthly"),
-    "USLEI": ("macro", "us", "lei", "monthly"),
-}
-
-_FRESHNESS_DAYS = {
-    "daily": 1,
-    "weekly": 7,
-    "monthly": 45,
-    "quarterly": 120,
-}
 
 
 class FREDProvider:
     """FRED macroeconomic data provider for US data."""
 
-    def __init__(self, api_key: Optional[str] = None, cache: Optional[DataCache] = None,
-                 storage: Optional[ParquetStorage] = None):
+    def __init__(self, api_key: Optional[str] = None, cache: Optional[DataCache] = None):
         self._api_key = api_key or os.environ.get("FRED_API_KEY")
         self._cache = cache
-        self._storage = storage or ParquetStorage()
         self._fred = None
 
     def _init_fred(self):
@@ -93,11 +60,6 @@ class FREDProvider:
                 self._fred = Fred(api_key=self._api_key)
             except ImportError:
                 raise ImportError("fredapi not installed. Install with: pip install fredapi")
-
-    def _is_fresh(self, last_date: date, data_type: str) -> bool:
-        """Check if cached data is still fresh based on frequency."""
-        max_age = _FRESHNESS_DAYS.get(data_type, 1)
-        return last_date >= date.today() - timedelta(days=max_age)
 
     def _cached(self, series_id: str, fn) -> pd.DataFrame:
         """Cache FRED API responses in diskcache."""
@@ -114,17 +76,8 @@ class FREDProvider:
         return df
 
     def get_series(self, series_id: str, start: Optional[str] = None) -> pd.DataFrame:
-        """Fetch a single FRED series by ID, with Parquet persistence."""
+        """Fetch a single FRED series by ID. No storage I/O — Gateway handles persistence."""
         self._init_fred()
-
-        # Check Parquet first
-        storage_key = FRED_STORAGE_KEYS.get(series_id)
-        if storage_key:
-            existing = self._storage.load(*storage_key)
-            if not existing.empty:
-                _, last = self._storage.get_date_range(*storage_key)
-                if last and self._is_fresh(last, storage_key[3]):
-                    return existing
 
         def fetch():
             try:
@@ -137,17 +90,7 @@ class FREDProvider:
                 return pd.DataFrame()
 
         df = self._cached(series_id, fetch)
-
-        if storage_key and df is not None and not df.empty:
-            return self._storage.merge_and_save(df, *storage_key)
-
-        if df is None or df.empty:
-            if storage_key:
-                existing = self._storage.load(*storage_key)
-                if not existing.empty:
-                    return existing
-            return pd.DataFrame()
-        return df
+        return df if df is not None and not df.empty else pd.DataFrame()
 
     def get_federal_funds_rate(self) -> Optional[float]:
         """Get current federal funds rate (most recent value)."""
