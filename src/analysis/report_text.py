@@ -42,19 +42,19 @@ def _find_latest_report(ticker_dir: str, market: str = "cn") -> Optional[Path]:
     """Find the most recent report file.
 
     Args:
-        ticker_dir: Stock directory name (CN) or ticker symbol (US)
+        ticker_dir: Stock directory name from stock_dir()
         market: "cn" for CNINFO MD files, "us" for EDGAR TXT files
     """
+    from src.data.storage import DEFAULT_DATA_DIR
+
+    reports_dir = DEFAULT_DATA_DIR / "stock" / market / ticker_dir / "reports"
+    if not reports_dir.exists():
+        return None
+
     if market == "us":
-        reports_dir = Path(f"data/stock/us/{ticker_dir}/reports")
-        if not reports_dir.exists():
-            return None
         files = sorted(reports_dir.glob("*.txt"))
         return files[-1] if files else None
 
-    reports_dir = Path(f"data/stock/cn/{ticker_dir}/reports")
-    if not reports_dir.exists():
-        return None
     files = sorted(reports_dir.glob("*.md"))
     # Prefer non-summary, non-补充 (supplement) versions
     full = [f for f in files if "摘要" not in f.name and "补充" not in f.name]

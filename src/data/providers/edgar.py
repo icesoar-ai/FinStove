@@ -9,7 +9,11 @@ import time
 
 import requests
 
-from src.utils.ticker import stock_dir
+from pathlib import Path
+from typing import Optional
+import time
+
+import requests
 
 
 class SECEDGARProvider:
@@ -26,9 +30,9 @@ class SECEDGARProvider:
     # Reverse lookup: form code → report_type key
     _FORM_TO_REPORT = {v: k for k, v in FORM_TYPE_MAP.items()}
 
-    def __init__(self, data_dir: str = "data/stock"):
+    def __init__(self, storage=None):
         self._cik_cache: dict[str, str] = {}
-        self._data_dir = data_dir
+        self._storage = storage  # ParquetStorage, for path generation only
 
     def _get_cik(self, ticker: str) -> Optional[str]:
         """Resolve ticker to CIK using SEC's company_tickers.json."""
@@ -113,11 +117,10 @@ class SECEDGARProvider:
                          form_types: Optional[list[str]] = None) -> list[dict]:
         """Download SEC filings (10-K and/or 10-Q) for a ticker.
 
-        Saves to data_dir/us/{ticker}/reports/{filename}.txt
+        Saves to data/stock/us/{dir_name}/reports/{filename}.txt
         """
         results = self.list_filings(ticker, form_types=form_types, since_year=since_year)
-        store_dir = stock_dir(ticker)
-        ticker_dir = Path(self._data_dir) / "us" / store_dir / "reports"
+        ticker_dir = self._storage.dir_path("stock", "us", ticker) / "reports"
         ticker_dir.mkdir(parents=True, exist_ok=True)
 
         for r in results:

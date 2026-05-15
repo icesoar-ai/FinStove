@@ -18,15 +18,38 @@ from typing import Optional
 
 import pandas as pd
 
+from src.utils.ticker import stock_dir
+
 DEFAULT_DATA_DIR = Path.cwd() / "data"
+
+# Asset types that use stock_dir for directory naming
+_STOCK_LIKE = {"stock", "etf"}
 
 
 class ParquetStorage:
     def __init__(self, base_dir: str | Path = DEFAULT_DATA_DIR):
         self.base = Path(base_dir)
 
+    # ── Public path API ──────────────────────────────
+
+    def dir_path(self, asset_type: str, market: str, code: str) -> Path:
+        """Directory for a stock/ETF/etc: data/{asset}/{market}/{dir_name}/"""
+        dir_name = stock_dir(code) if asset_type in _STOCK_LIKE else code
+        return self.base / asset_type / market / dir_name
+
+    def file_path(self, asset_type: str, market: str, code: str,
+                  data_type: str = "", ext: str = ".parquet") -> Path:
+        """Full file path: data/{asset}/{market}/{dir_name}/{data_type}{ext}"""
+        path = self.dir_path(asset_type, market, code)
+        if data_type:
+            return path / f"{data_type}{ext}"
+        return path
+
+    # ── Internal ─────────────────────────────────────
+
     def _path(self, asset_type: str, market: str, symbol: str, data_type: str) -> Path:
-        return self.base / asset_type / market / symbol / f"{data_type}.parquet"
+        """Parquet file path. For stock/ETF, symbol is resolved via stock_dir."""
+        return self.file_path(asset_type, market, symbol, data_type)
 
     # ---- Read ----
 

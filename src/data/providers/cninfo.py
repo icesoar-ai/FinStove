@@ -213,9 +213,7 @@ class CNINFOProvider:
             safe_title = r["title"].replace("/", "_").replace(":", "_").replace("?", "")
 
             # PDF
-            pdf_dir = self._storage.base / "stock" / "cn" / dir_name / "reports"
-            pdf_dir.mkdir(parents=True, exist_ok=True)
-            pdf_dest = pdf_dir / f"{safe_title}.pdf"
+            pdf_dest = self._storage.file_path("stock", "cn", symbol, f"reports/{safe_title}", ext=".pdf")
             pdf_ok = self._download_file(r["pdf_url"], pdf_dest)
 
             # Markdown
