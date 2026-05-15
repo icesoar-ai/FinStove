@@ -101,7 +101,11 @@ def financials(ticker: str, years: str, period: str):
 
 
 def _display_financials(df, symbol: str, period: str = "all"):
-    """Display financial metrics."""
+    """Display financial metrics.
+
+    A股报告期: 年报(12-31)/一季报(03-31)/半年报(06-30)/三季报(09-30).
+    "quarterly" 组包含所有非年报期间(一季报+半年报+三季报).
+    """
     if period == "annual":
         filtered = df[df["报告期"].str.endswith("-12-31")].sort_values("报告期")
     elif period == "quarterly":
