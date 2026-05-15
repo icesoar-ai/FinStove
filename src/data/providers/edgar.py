@@ -21,6 +21,8 @@ class SECEDGARProvider:
         "annual":    "10-K",
         "quarterly": "10-Q",
     }
+    # Reverse lookup: form code → report_type key
+    _FORM_TO_REPORT = {v: k for k, v in FORM_TYPE_MAP.items()}
 
     def __init__(self):
         self._cik_cache: dict[str, str] = {}
@@ -88,7 +90,7 @@ class SECEDGARProvider:
                     continue
 
                 acc = accessions[i].replace("-", "")
-                rtype = "annual" if forms[i] == "10-K" else "quarterly"
+                rtype = self._FORM_TO_REPORT.get(forms[i], "annual")
 
                 results.append({
                     "form": forms[i],

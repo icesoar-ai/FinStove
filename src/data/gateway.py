@@ -305,7 +305,7 @@ class DataGateway:
         """年报/半年报/季报下载。
 
         A股: CNINFO (PDF+MD)，通过 RateLimiter 限速 + 退避重试。
-        美股: SEC EDGAR (10-K 文本)。
+        美股: SEC EDGAR (10-K/10-Q 文本)。
         """
         if market == Market.CN:
             rkey = "cninfo"
