@@ -86,3 +86,14 @@ def stock_dir(symbol: str) -> str:
     if name:
         return f"{symbol}_{name}"
     return symbol
+
+
+def market_dir(market: Market, code: str) -> str:
+    """Return storage directory name: {code}.{market}.
+
+    Examples:
+        market_dir(Market.HK, "00700") → "00700.HK"
+        market_dir(Market.US, "AAPL") → "AAPL.US"
+        market_dir(Market.JP, "7203") → "7203.JP"
+    """
+    return f"{code}.{market.value}"
