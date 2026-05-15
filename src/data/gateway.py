@@ -296,14 +296,26 @@ class DataGateway:
         result = self._try("_yf", self._yf.get_dividends, symbol, market.value)
         return result if result is not None else pd.DataFrame()
 
-    def get_reports(self, symbol: str, market: Market = Market.CN) -> list[dict]:
-        """年报下载。
+    def get_reports(self, symbol: str, market: Market = Market.CN,
+                    since_year: Optional[int] = None,
+                    report_types: Optional[list[str]] = None) -> list[dict]:
+        """年报/半年报/季报下载。
 
-        A股: CNINFO (PDF+MD)。
+        A股: CNINFO (PDF+MD)，通过 RateLimiter 限速 + 退避重试。
         美股: SEC EDGAR (10-K 文本)。
         """
         if market == Market.CN:
-            return self._cninfo.download_reports(symbol)
+            rkey = "cninfo"
+            for attempt in self._rate_limiter.attempts(rkey):
+                try:
+                    result = self._cninfo.download_reports(
+                        symbol, since_year=since_year, report_types=report_types
+                    )
+                    attempt.success()
+                    return result
+                except Exception:
+                    attempt.failure()
+            return []
         return self._edgar.download_10k(symbol)
 
     # ── 宏观 ─────────────────────────────────────────
