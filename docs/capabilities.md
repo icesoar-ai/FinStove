@@ -68,8 +68,8 @@ python -m src.cli.main fetch yield-curve [--history]
 | `fetch commodity [CODE]` | 黄金/白银/WTI/布伦特/天然气/铜/铂/钯/铝/锌 | 无参拉全部 10 种 |
 | `fetch forex [PAIR]` | 9 对 | USDCNY/EURCNY/JPYCNY/EURUSD/USDJPY/GBPUSD/AUDUSD/USDCAD/GBPCNY |
 | `fetch crypto [SYMBOL]` | BTC/ETH/SOL 等 | YFinance 优先，降级 CoinGecko |
-| `fetch financials <TICKER>` | A股/美股 | 三张表 + 财务指标 + 分红记录。`--period all|annual|quarterly` 筛选周期 |
-| `fetch reports <TICKER>` | A股/美股 | A股: CNINFO 年报/半年报/季报 PDF+MD；美股: SEC EDGAR 10-K/10-Q 文本。`--type all|annual|semi_annual|quarterly`, `--years` 默认近2年 |
+| `fetch financials <TICKER>` | A股/港股/美股 | 三张表 + 财务指标 + 分红记录。`--period all|annual|quarterly` 筛选周期 |
+| `fetch reports <TICKER>` | A股/美股 | A股: CNINFO 年报/半年报/季报 PDF+MD；美股: SEC EDGAR 10-K/10-Q 文本。港股暂不支持。`--type all|annual|semi_annual|quarterly`, `--years` 默认近2年 |
 | `fetch flow` | 沪深港通 | 北向 (外资→A股) + 南向 (内资→港股) |
 | `fetch yield-curve` | 美债 | 3M/1Y/2Y/5Y/10Y/30Y，需 `FRED_API_KEY` |
 
