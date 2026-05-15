@@ -117,7 +117,7 @@ class CNINFOProvider:
 
         stock_id = self._resolve_org_id(symbol)
         results: list[dict] = []
-        seen: set[tuple[int, str]] = set()
+        seen: set[tuple[int, str, str]] = set()
 
         for rtype in report_types:
             category = self.CATEGORY_MAP[rtype]
