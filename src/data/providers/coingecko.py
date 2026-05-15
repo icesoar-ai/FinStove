@@ -3,14 +3,12 @@
 Free API tier: 10-50 calls/min, no key required for basic endpoints.
 For higher rate limits, register at https://www.coingecko.com/api/pricing
 """
-from datetime import date, timedelta
 from typing import Optional
 import os
 
 import pandas as pd
 
 from ..cache import DataCache
-from ..storage import ParquetStorage
 
 
 # CoinGecko ID 映射 (常用加密货币)
@@ -45,11 +43,9 @@ CURRENCY_MAP = {
 class CoinGeckoProvider:
     """CoinGecko cryptocurrency data provider."""
 
-    def __init__(self, api_key: Optional[str] = None, cache: Optional[DataCache] = None,
-                 storage: Optional[ParquetStorage] = None):
+    def __init__(self, api_key: Optional[str] = None, cache: Optional[DataCache] = None):
         self._api_key = api_key or os.environ.get("COINGECKO_API_KEY")
         self._cache = cache
-        self._storage = storage or ParquetStorage()
         self._cg = None
 
     def _init_cg(self):
@@ -209,40 +205,23 @@ class CoinGeckoProvider:
             return pd.DataFrame()
 
     def get_historical_ohlcv(self, symbol: str, vs_currency: str = "usd") -> pd.DataFrame:
-        """Get historical OHLCV data from CoinGecko.
-
-        Note: CoinGecko doesn't provide traditional OHLCV.
-        This method fetches daily prices and creates pseudo-OHLCV.
-        For real OHLCV, use exchange-specific APIs.
-        """
+        """Get historical OHLCV data. No storage I/O — Gateway handles persistence."""
         coin_id = self.get_coin_id(symbol)
         if not coin_id:
             return pd.DataFrame()
 
-        store_symbol = symbol.upper()
-        existing = self._storage.load("crypto", "global", store_symbol, "daily")
-        if not existing.empty:
-            _, last_date = self._storage.get_date_range("crypto", "global", store_symbol, "daily")
-            if last_date and last_date >= date.today() - timedelta(days=1):
-                return existing
-
-        # Get last 365 days (CoinGecko free tier limit)
         df = self.get_historical(symbol, days=365, currency=vs_currency)
-
         if df is None or df.empty:
-            return existing if not existing.empty else pd.DataFrame()
+            return pd.DataFrame()
 
-        # Create pseudo-OHLCV (CoinGecko only gives closing prices)
         ohlcv = pd.DataFrame()
         ohlcv["date"] = df["date"]
         ohlcv["close"] = df["price"]
-        ohlcv["open"] = df["price"]  # Same as close (limitation)
-        ohlcv["high"] = df["price"] * 1.02  # Estimate
-        ohlcv["low"] = df["price"] * 0.98  # Estimate
+        ohlcv["open"] = df["price"]
+        ohlcv["high"] = df["price"] * 1.02
+        ohlcv["low"] = df["price"] * 0.98
         ohlcv["volume"] = df["total_volume"]
         ohlcv["market_cap"] = df["market_cap"]
-
-        ohlcv = self._storage.merge_and_save(ohlcv, "crypto", "global", store_symbol, "daily")
         return ohlcv
 
     def get_top_coins(self, limit: int = 100, currency: str = "usd") -> pd.DataFrame:
