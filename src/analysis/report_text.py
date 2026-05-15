@@ -1,4 +1,4 @@
-"""Annual report text analysis — extract metrics, audit opinion, risk factors."""
+"""Report text analysis — extract metrics, audit opinion, risk factors from A股 年报/半年报/季报."""
 import re
 from pathlib import Path
 from typing import Optional
@@ -97,7 +97,7 @@ def _extract_risk_factors(text: str) -> list[Signal]:
         signals.append(Signal("风险提示正常", "neutral", 0.1, f"风险关键词 {neg_count} 次"))
 
     if "重大诉讼" in text and "无重大诉讼" not in text:
-        signals.append(Signal("存在重大诉讼", "bearish", 0.5, "年度报告披露重大诉讼"))
+        signals.append(Signal("存在重大诉讼", "bearish", 0.5, "报告披露重大诉讼"))
 
     return signals
 
@@ -118,7 +118,7 @@ def _extract_outlook(text: str) -> list[Signal]:
 
 
 class ReportTextAnalyzer(AbstractAnalyzer):
-    """Analyze annual report MD text for audit opinion, risks, and outlook.
+    """Analyze report MD text (annual/semi-annual/quarterly) for audit opinion, risks, and outlook.
 
     Complements fundamental analysis with qualitative signals from the
     management discussion and notes. Only works for CN stocks (reports
