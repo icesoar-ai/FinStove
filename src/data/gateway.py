@@ -34,6 +34,8 @@ from .providers.coingecko import CoinGeckoProvider
 from .providers.news import NewsProvider
 from .providers.edgar import SECEDGARProvider
 
+from src.utils.ticker import stock_dir, market_dir
+
 
 class DataGateway:
     """统一数据网关."""
@@ -140,7 +142,13 @@ class DataGateway:
         # Normalize date formats
         start_fmt = self._normalize_date(start)
         end_fmt = self._normalize_date(end)
-        dir_name = self._stock_dir(symbol) if market == Market.CN else symbol
+        # HK and new markets use {code}.{market}; US/others keep bare symbol for compat
+        if market == Market.CN:
+            dir_name = stock_dir(symbol)
+        elif market == Market.HK:
+            dir_name = market_dir(market, symbol)
+        else:
+            dir_name = symbol
 
         if market == Market.CN:
             # AKShare uses YYYYMMDD
@@ -279,11 +287,16 @@ class DataGateway:
         """三张表。
 
         A股: AKShare（同花顺）。
-        美股/港股: yfinance。
+        港股: AKShare（东方财富 港股）。
+        美股: yfinance。
         """
         if market == Market.CN:
-            dir_name = self._stock_dir(symbol)
+            dir_name = stock_dir(symbol)
             return self._ak.get_financials(symbol, dir_name=dir_name)
+        if market == Market.HK:
+            result = self._ak.get_hk_financials(symbol)
+            if result:
+                return result
         result = self._try("_yf", self._yf.get_financials, symbol, market.value)
         return result if result is not None else {}
 
@@ -291,11 +304,16 @@ class DataGateway:
         """历史分红。
 
         A股: AKShare。
-        美股/港股: yfinance。
+        港股: AKShare 优先，降级 yfinance。
+        美股: yfinance。
         """
         if market == Market.CN:
-            dir_name = self._stock_dir(symbol)
+            dir_name = stock_dir(symbol)
             return self._ak.get_dividends(symbol, dir_name=dir_name)
+        if market == Market.HK:
+            df = self._ak.get_hk_dividends(symbol)
+            if df is not None and not df.empty:
+                return df
         result = self._try("_yf", self._yf.get_dividends, symbol, market.value)
         return result if result is not None else pd.DataFrame()
 
@@ -321,6 +339,9 @@ class DataGateway:
                     last_err = e
                     attempt.failure()
             logger.warning("CNINFO download_reports 全部重试失败: %s", last_err)
+            return []
+        if market == Market.HK:
+            logger.warning("港股年报下载暂不支持 (无披露易 Provider)")
             return []
         # US market: map report_types to SEC form types
         if report_types is None:
