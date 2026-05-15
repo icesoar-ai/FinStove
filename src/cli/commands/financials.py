@@ -17,32 +17,33 @@ console = Console()
               type=click.Choice(["all", "annual", "quarterly"]),
               help="显示周期，默认 all")
 def financials(ticker: str, years: str, period: str):
-    """A股三大财务报表 — 资产负债表 / 利润表 / 现金流量表 / 主要财务指标.
+    """三大财务报表 — 资产负债表 / 利润表 / 现金流量表 / 主要财务指标.
 
-    数据源: AKShare (同花顺)，需先拉取数据: /fetch-stock <TICKER> financials
+    A股: AKShare (同花顺)，港股: AKShare (东方财富)，美股: yfinance。
     """
     symbol, market = parse_ticker(ticker)
     gw = DataGateway()
 
     if market.value != "cn":
-        # US/HK: fetch via yfinance directly
+        from src.utils.ticker import market_dir as _mkt_dir
         console.print(f"[bold]Fetching financials for {symbol} (market={market.value})...[/bold]")
         try:
             result = gw.get_financials(symbol, market)
             if not result:
                 console.print("[yellow]No financial data returned.[/yellow]")
                 return
+            store_sym = _mkt_dir(market, symbol) if market.value == "hk" else symbol
             for name in ["balance_sheet", "income", "cashflow"]:
                 df = result.get(name)
                 if df is not None and not df.empty:
                     df = df.reset_index()
                     if isinstance(df.columns, pd.DatetimeIndex):
                         df.columns = [str(c.date()) for c in df.columns]
-                    gw._storage.save(df, "stock", market.value, symbol, name)
+                    gw._storage.save(df, "stock", market.value, store_sym, name)
             # Dividends
             div_df = gw.get_dividends(symbol, market)
             if div_df is not None and not div_df.empty:
-                gw._storage.save(div_df, "stock", market.value, symbol, "dividends")
+                gw._storage.save(div_df, "stock", market.value, store_sym, "dividends")
                 console.print(f"[green]Saved: balance_sheet, income, cashflow, dividends ({len(div_df)} records)[/green]")
             else:
                 console.print(f"[green]Saved: balance_sheet, income, cashflow[/green]")

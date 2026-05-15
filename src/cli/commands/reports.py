@@ -48,6 +48,9 @@ def reports(ticker: str, report_type: str, years: str):
         else:
             report_types = [report_type]
         label_map = REPORT_TYPE_HELP
+    elif market.value == "hk":
+        console.print("[red]港股年报下载暂不支持[/red]")
+        return
     else:
         # US: no semi_annual
         if report_type == "all":
