@@ -322,7 +322,14 @@ class DataGateway:
                     attempt.failure()
             logger.warning("CNINFO download_reports 全部重试失败: %s", last_err)
             return []
-        return self._edgar.download_filings(symbol)
+        # US market: map report_types to SEC form types
+        if report_types is None:
+            form_types = None  # download_filings defaults to ["10-K", "10-Q"]
+        else:
+            form_types = [self._edgar.FORM_TYPE_MAP.get(rt, "10-K") for rt in report_types]
+        return self._edgar.download_filings(
+            symbol, since_year=since_year, form_types=form_types
+        )
 
     # ── 宏观 ─────────────────────────────────────────
 
