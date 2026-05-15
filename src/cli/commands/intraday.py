@@ -4,7 +4,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.data.cache import DataCache
+from src.data.gateway import DataGateway
+from src.data.base import Market
 from src.data.storage import ParquetStorage
 from src.utils.ticker import parse_ticker, stock_dir
 
@@ -33,52 +34,20 @@ def intraday(ticker: str, interval: str, period: str, save: bool):
       intraday AAPL -i 15m         Apple 15分钟K线
       intraday 600519 -i 1m --save 1分钟K线 + 持久化
     """
-    symbol, market = parse_ticker(ticker)
-    cache = DataCache()
+    symbol, market_enum = parse_ticker(ticker)
+    gw = DataGateway()
     storage = ParquetStorage()
 
     console.print(f"[bold]盘中 {ticker} ({interval})[/bold]")
 
-    df = None
-    source = None
-
-    if market == "CN":
-        # Try AKShare first (better real-time for CN), fallback to yfinance
-        from src.data.providers.akshare import AKShareProvider
-        ak = AKShareProvider(cache=cache)
-        try:
-            ak_period = interval.replace("m", "").replace("h", "60")
-            df = ak.get_intraday(symbol, period=ak_period, adjust="qfq")
-            if not df.empty:
-                source = "AKShare"
-        except Exception:
-            pass
-
-        if df is None or df.empty:
-            console.print("[dim]  AKShare 不可用，降级 yfinance...[/dim]")
-            from src.data.providers.yfinance import YFinanceProvider
-            yf = YFinanceProvider(cache=cache, storage=storage)
-            try:
-                df = yf.get_intraday(symbol, market="cn", interval=interval, period=period)
-                if not df.empty:
-                    source = "YFinance"
-            except Exception:
-                pass
-    else:
-        from src.data.providers.yfinance import YFinanceProvider
-        yf = YFinanceProvider(cache=cache, storage=storage)
-        try:
-            df = yf.get_intraday(symbol, market=market.value.lower(),
-                                 interval=interval, period=period)
-            if not df.empty:
-                source = "YFinance"
-        except Exception:
-            pass
+    mkt = Market(market_enum.value)
+    df = gw.get_intraday(symbol, mkt, interval=interval.replace("m", ""))
 
     if df is None or df.empty:
         console.print("[red]无法获取盘中数据 (AKShare 限流 + yfinance 不可用)[/red]")
         return
 
+    source = "AKShare" if mkt == Market.CN else "YFinance"
     console.print(f"[dim]  数据源: {source}  |  {len(df)} 根 K 线[/dim]")
 
     # Summary
@@ -123,7 +92,7 @@ def intraday(ticker: str, interval: str, period: str, save: bool):
 
     # Persist
     if save:
-        store_sym = stock_dir(symbol) if market == "CN" else symbol
-        storage.merge_intraday(df, "stock", market.value.lower(), store_sym, interval)
-        path = f"data/stock/{market.value.lower()}/{store_sym}/intraday_{interval}.parquet"
+        store_sym = stock_dir(symbol) if market_enum.value == "CN" else symbol
+        storage.merge_intraday(df, "stock", market_enum.value.lower(), store_sym, interval)
+        path = f"data/stock/{market_enum.value.lower()}/{store_sym}/intraday_{interval}.parquet"
         console.print(f"[dim]  Saved → {path}[/dim]")

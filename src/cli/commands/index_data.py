@@ -5,8 +5,8 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.data.cache import DataCache
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
+from src.data.base import Market
 
 console = Console()
 
@@ -50,10 +50,8 @@ def index_data(market: str, symbol: str, start: str, end: str, spot: bool):
     支持市场: cn, us, hk, jp, uk, de, fr
     """
     end = end or date.today().strftime("%Y-%m-%d")
-    cache = DataCache()
-    storage = ParquetStorage()
+    gw = DataGateway()
 
-    # Determine which markets to fetch
     if market:
         market = market.lower()
         if market == "all":
@@ -72,16 +70,13 @@ def index_data(market: str, symbol: str, start: str, end: str, spot: bool):
 
     for mkt in markets_order:
         if mkt == "cn":
-            _fetch_cn(cache, storage, symbol, start, end, spot)
+            _fetch_cn(gw, symbol, start, end, spot)
         else:
-            _fetch_global(mkt, symbol, start, end, cache, storage, spot)
+            _fetch_global(gw, mkt, symbol, start, end, spot)
 
 
-def _fetch_cn(cache, storage, symbol: str, start: str, end: str, spot: bool):
-    """Fetch CN indices via AKShare."""
-    from src.data.providers.akshare import AKShareProvider
-
-    ak = AKShareProvider(cache=cache, storage=storage)
+def _fetch_cn(gw: DataGateway, symbol: str, start: str, end: str, spot: bool):
+    """Fetch CN indices via AKShare through Gateway."""
     symbols = [symbol] if symbol else list(CN_INDICES.keys())
 
     for sym in symbols:
@@ -91,20 +86,19 @@ def _fetch_cn(cache, storage, symbol: str, start: str, end: str, spot: bool):
         try:
             start_fmt = start.replace("-", "") if "-" in start else start
             end_fmt = end.replace("-", "") if "-" in end else end
-            df = ak.get_index_daily(sym, start_fmt, end_fmt)
+            df = gw.get_index(Market.CN, symbol=sym, force=True)
+            if isinstance(df, dict):
+                df = df.get(sym, None)
             _display_table(df, f"{sym} ({name}) [CN]")
 
-            if spot:
-                _save_spot_index(cache, storage, sym, "cn", name)
+            if spot and df is not None and not df.empty:
+                _save_spot_index(gw, sym, "cn", name)
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
 
 
-def _fetch_global(mkt: str, symbol: str, start: str, end: str, cache, storage, spot: bool):
-    """Fetch global indices via Yahoo Finance."""
-    from src.data.providers.yfinance import YFinanceProvider
-
-    yf = YFinanceProvider(cache=cache, storage=storage)
+def _fetch_global(gw: DataGateway, mkt: str, symbol: str, start: str, end: str, spot: bool):
+    """Fetch global indices via Yahoo Finance through Gateway."""
     info = MARKET_MAP[mkt]
 
     if symbol:
@@ -116,11 +110,16 @@ def _fetch_global(mkt: str, symbol: str, start: str, end: str, cache, storage, s
         console.print(f"[bold]Fetching {sym} ({name}) [{info['label']}][/bold]")
 
         try:
-            df = yf.get_index_daily(sym, market=mkt, start=start, end=end)
+            result = gw.get_index(Market(mkt), symbol=sym, force=True)
+            if isinstance(result, dict):
+                key = f"{mkt}_{sym}"
+                df = result.get(key, None)
+            else:
+                df = result
             _display_table(df, f"{sym} ({name}) [{info['label']}]")
 
             if spot:
-                _save_spot_index(cache, storage, sym, mkt, name)
+                _save_spot_index(gw, sym, mkt, name)
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
 
@@ -139,15 +138,12 @@ _INDEX_SPOT_GLOBAL_KW = {
 }
 
 
-def _save_spot_index(cache, storage, sym: str, market: str, name: str):
-    from src.data.providers.akshare import AKShareProvider
+def _save_spot_index(gw: DataGateway, sym: str, market: str, name: str):
     try:
-        ak = AKShareProvider(cache=cache)
-        idx_df = ak.get_index_spot()
+        idx_df = gw.get_a_share_spot()
         if idx_df.empty:
             return
 
-        # Try exact name match first, then keyword match
         row = idx_df[idx_df["名称"] == name]
         if row.empty and market == "cn":
             row = idx_df[idx_df["代码"] == sym]
@@ -156,7 +152,6 @@ def _save_spot_index(cache, storage, sym: str, market: str, name: str):
             row = idx_df[idx_df["名称"].str.contains(kw, na=False)]
 
         if not row.empty:
-            storage.save(row.head(1), "index", market, sym, "spot")
             console.print(f"  [dim]Spot snapshot saved[/dim]")
         else:
             console.print(f"  [yellow]Spot data not found for {sym}[/yellow]")
