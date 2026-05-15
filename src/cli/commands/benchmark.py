@@ -8,7 +8,7 @@ from src.analysis.benchmark import BenchmarkAnalyzer
 from src.data.gateway import DataGateway
 from src.data.base import Market
 from src.data.models import Ticker as TickerModel
-from src.data.macro_data import get_all_macro_data
+
 from src.utils.ticker import parse_ticker
 
 console = Console()
@@ -85,7 +85,7 @@ def benchmark(ticker: str, start: str, end: str, market: str):
     bench_return = _get_benchmark_return(mkt)
 
     # Get macro data for risk-free rate
-    macro_data = get_all_macro_data()
+    macro_data = DataGateway().get_macro()
     if bench_return is not None:
         macro_data["benchmark_returns"] = bench_return
 

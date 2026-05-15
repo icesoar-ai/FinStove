@@ -7,7 +7,7 @@ from src.analysis.base import AnalysisContext
 from src.analysis.correlation import CorrelationAnalyzer
 from src.data.base import Market as MktEnum
 from src.data.models import Ticker as TickerModel
-from src.data.macro_data import get_all_macro_data
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -17,7 +17,7 @@ def correlation_check():
     """跨市场联动分析 — 黄金/DXY/VIX 信号判断 Risk-On/Risk-Off 体制."""
     console.print("[bold blue]Correlation Check: 跨市场联动[/bold blue]")
 
-    macro_data = get_all_macro_data()
+    macro_data = DataGateway().get_macro()
     if not macro_data:
         console.print("[red]No macro data available.[/red]")
         return
