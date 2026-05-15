@@ -552,7 +552,23 @@ class DataGateway:
                 elif scalar_key == "unemployment":
                     result["unemployment"] = {"CN": result.pop("unemployment")}
 
-        # US data (FRED)
+        # US data (FRED) — persist raw series before computing derived values
+        _fred_series = [
+            ("FEDFUNDS", "fed_funds_rate", "monthly", 1),
+            ("CPIAUCSL", "cpi", "monthly", 45),
+            ("UNRATE", "unemployment", "monthly", 45),
+            ("GDP", "gdp", "quarterly", 120),
+            ("DGS10", "treasury_10y", "daily", 1),
+            ("DGS2", "treasury_2y", "daily", 1),
+            ("NAPM", "pmi", "monthly", 45),
+        ]
+        for sid, sym, dtype, freshness in _fred_series:
+            try:
+                self._read_or_fetch("macro", "us", sym, dtype, "_fred",
+                                    self._fred.get_series, sid, freshness_days=freshness)
+            except Exception:
+                pass
+
         try:
             us_data = self._fred.get_all_macro_data()
             if us_data:
