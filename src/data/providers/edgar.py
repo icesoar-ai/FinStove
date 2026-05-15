@@ -118,8 +118,10 @@ class SECEDGARProvider:
 
         for r in results:
             form = r["form"]
-            year = r["report_date"][:4] if r["report_date"] else "unknown"
-            filename = f"{year}_{form}_{ticker}.txt"
+            report_date = r["report_date"] or ""
+            # Use report_date YYYYMMDD to distinguish multiple filings per year (e.g. Q1/Q2/Q3 10-Q)
+            date_prefix = report_date.replace("-", "") if report_date else "unknown"
+            filename = f"{date_prefix}_{form}_{ticker}.txt"
             dest = ticker_dir / filename
             if dest.exists() and dest.stat().st_size > 0:
                 r["downloaded"] = True
