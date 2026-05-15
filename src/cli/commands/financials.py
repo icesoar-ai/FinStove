@@ -25,14 +25,14 @@ def financials(ticker: str, years: str, period: str):
     gw = DataGateway()
 
     if market.value != "cn":
-        from src.utils.ticker import market_dir as _mkt_dir
+        from src.utils.ticker import stock_dir as _sdir
         console.print(f"[bold]Fetching financials for {symbol} (market={market.value})...[/bold]")
         try:
             result = gw.get_financials(symbol, market)
             if not result:
                 console.print("[yellow]No financial data returned.[/yellow]")
                 return
-            store_sym = _mkt_dir(market, symbol) if market.value == "hk" else symbol
+            store_sym = _sdir(symbol)
             for name in ["balance_sheet", "income", "cashflow"]:
                 df = result.get(name)
                 if df is not None and not df.empty:

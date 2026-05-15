@@ -9,6 +9,8 @@ import time
 
 import requests
 
+from src.utils.ticker import stock_dir
+
 
 class SECEDGARProvider:
     """Provider for SEC EDGAR filings (10-K annual, 10-Q quarterly)."""
@@ -114,7 +116,8 @@ class SECEDGARProvider:
         Saves to data_dir/us/{ticker}/reports/{filename}.txt
         """
         results = self.list_filings(ticker, form_types=form_types, since_year=since_year)
-        ticker_dir = Path(self._data_dir) / "us" / ticker / "reports"
+        store_dir = stock_dir(ticker)
+        ticker_dir = Path(self._data_dir) / "us" / store_dir / "reports"
         ticker_dir.mkdir(parents=True, exist_ok=True)
 
         for r in results:
