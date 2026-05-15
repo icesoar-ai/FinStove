@@ -200,7 +200,10 @@ diskcache (SQLite缓存)
 | A股幸存者偏差 (退市股) | 未处理 |
 | 前视偏差 (财报发布日期 vs 截止日) | 未检测 |
 | 复权数据校验 | 未实现 |
-| API 限速自动退避/重试 | 已实现 (`src/data/rate_limiter.py`, `config/providers.yaml`) |
+| API 限速自动退避/重试 | 已实现 (AKShare/yfinance/Baostock/FRED/CNINFO/CoinGecko/ETF，含退避和降级链) |
+| ETF CN 日线降级 | 已实现 (AKShare `fund_etf_hist_em` → yfinance) |
+| 读写路径统一 | 已实现 (`ParquetStorage.dir_path` / `file_path` 统一所有路径生成) |
+| 目录命名统一 | 已实现 (`{code}.{suffix}` — `601318.SH`, `00700.HK`, `AAPL.US`) |
 | 分析模块并行化 | 未实现 |
 
 ### 输出

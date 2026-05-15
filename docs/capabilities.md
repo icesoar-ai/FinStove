@@ -57,6 +57,7 @@ python -m src.cli.main fetch forex [PAIR] [--spot]
 python -m src.cli.main fetch crypto [SYMBOL] [--spot]
 python -m src.cli.main fetch financials <TICKER>
 python -m src.cli.main fetch reports <TICKER>
+python -m src.cli.main fetch etf <TICKER>
 python -m src.cli.main fetch flow
 python -m src.cli.main fetch yield-curve [--history]
 ```
