@@ -8,12 +8,13 @@
 data/
 ├── stock/           # 个股数据
 │   └── {market}/    #   cn / us / hk
-│       └── {CODE}_{NAME}/    # 例: 600388_龙净环保
+│       └── {CODE}.{SUFFIX}/  # 例: 601318.SH (中国平安), AAPL.US
+│           ├── __{名称}.name.txt     # 名称标记文件 (label-data 命令生成)
 │           ├── daily.parquet        # 日线 OHLCV
 │           ├── income.parquet       # 利润表
 │           ├── balance_sheet.parquet # 资产负债表
 │           ├── cashflow.parquet     # 现金流量表
-│           ├── financials.parquet   # 主要财务指标
+│           ├── financials_summary.parquet # 主要财务指标
 │           ├── dividends.parquet    # 分红记录
 │           └── reports/             # 年报 PDF/MD
 ├── index/           # 全球指数
@@ -121,3 +122,19 @@ data/
 | 000300 / 000905 | 沪深300 / 中证500 | index/cn |
 | USDCNY / DXY | 美元人民币 / 美元指数 | forex |
 | BTC / ETH | 比特币 / 以太坊 | crypto |
+
+## 名称标记文件
+
+每个资产目录下可放置 `__{名称}.name.txt` 标记文件，方便在文件系统中直接识别资产。
+
+运行 `python -m src.cli.main label-data` 自动为 `data/` 下所有资产生成标记文件。
+
+名称来源：A 股走 AKShare + `stock_names.json` 缓存，指数/商品/外汇/加密走硬编码中文映射，美股/港股走 yfinance。
+
+```
+data/stock/cn/601318.SH/__中国平安.name.txt
+data/commodity/global/GC/__黄金.name.txt
+data/forex/global/USDCNY/__美元_人民币.name.txt
+```
+
+该文件不影响数据读写——Storage 模块仅访问 `.parquet` 路径。

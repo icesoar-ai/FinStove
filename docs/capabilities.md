@@ -101,3 +101,11 @@ python -m src.cli.main review <TICKER>             # 回顾历史判断
 python -m src.cli.main market-scan                 # 多市场扫描
 python -m src.cli.main summary                     # 每日数据汇总
 ```
+
+### 工具
+
+```bash
+python -m src.cli.main label-data          # 为 data/ 下所有资产生成 __{名称}.name.txt 标记文件
+python -m src.cli.main label-data --force  # 覆盖已存在的 marker
+python -m src.cli.main label-data --refresh # 清除名称缓存后重新查 API（股票改名时用）
+```
