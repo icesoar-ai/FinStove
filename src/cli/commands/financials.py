@@ -64,7 +64,7 @@ def financials(ticker: str, years: str, period: str):
         fin = ak.stock_financial_abstract_ths(symbol=symbol)
         fin["报告期_dt"] = pd.to_datetime(fin["报告期"])
         recent = fin.drop(columns=["报告期_dt"])
-        s.save(recent, "stock", "cn", dir_name, "financials")
+        s.save(recent, "stock", "cn", dir_name, "financials_summary")
         console.print(f"[green]财务摘要: {len(recent)} 期[/green]")
 
         # Filter by years
