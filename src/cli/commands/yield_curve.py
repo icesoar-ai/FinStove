@@ -6,8 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.data.cache import DataCache
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -19,15 +18,11 @@ def yield_curve_data(history: bool):
 
     需要环境变量 FRED_API_KEY。
     """
-    from src.data.providers.fred import FREDProvider
-
-    cache = DataCache()
-    storage = ParquetStorage()
-    fred = FREDProvider(cache=cache, storage=storage)
+    gw = DataGateway()
 
     if history:
         try:
-            df = fred.get_yield_curve_history()
+            df = gw.get_yield_curve_history()
             if df is None or df.empty:
                 console.print("[yellow]No yield curve history available.[/yellow]")
                 return
@@ -54,7 +49,7 @@ def yield_curve_data(history: bool):
             console.print(f"[red]  Error: {e}[/red]")
     else:
         try:
-            curve = fred.get_yield_curve()
+            curve = gw.get_yield_curve()
 
             if not any(curve.values()):
                 console.print("[yellow]No yield curve data available. Set FRED_API_KEY?[/yellow]")

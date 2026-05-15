@@ -4,9 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.data.cache import DataCache
-from src.data.providers.akshare import AKShareProvider
-from src.data.providers.coingecko import CoinGeckoProvider
+from src.data.gateway import DataGateway
 from src.utils.ticker import detect_market, parse_ticker
 
 console = Console()
@@ -165,9 +163,9 @@ def _overview():
 
 # ==== Mode: market movers ====
 
-def _market_movers(ak: AKShareProvider, market: str, limit: int):
+def _market_movers(gw: DataGateway, market: str, limit: int):
     mk_label = {"cn": "A股", "hk": "港股", "us": "美股"}.get(market, market.upper())
-    market_fn = {"cn": ak.get_a_share_spot, "hk": ak.get_hk_stock_spot, "us": ak.get_us_stock_spot}
+    market_fn = {"cn": gw.get_a_share_spot, "hk": gw.get_hk_stock_spot, "us": gw.get_us_stock_spot}
 
     fn = market_fn.get(market)
     if fn is None:
@@ -230,13 +228,13 @@ def _market_movers(ak: AKShareProvider, market: str, limit: int):
 
 # ==== Mode: ticker detail ====
 
-def _ticker_detail(ak: AKShareProvider, cg: CoinGeckoProvider, ticker: str):
+def _ticker_detail(gw: DataGateway, ticker: str):
     symbol, market = parse_ticker(ticker)
 
     # Crypto
     if ticker.upper() in ("BTC", "ETH"):
         try:
-            md = cg.get_market_data(ticker.upper())
+            md = gw.get_crypto_market_data(ticker.upper())
             if md:
                 chg = md.get("change_24h", 0) or 0
                 color = _chg_color(chg)
@@ -261,7 +259,7 @@ def _ticker_detail(ak: AKShareProvider, cg: CoinGeckoProvider, ticker: str):
     # CN stock
     if market == "CN":
         try:
-            df = ak.get_a_share_spot()
+            df = gw.get_a_share_spot()
             row = df[df["代码"] == symbol]
             if row.empty:
                 console.print(f"[yellow]未找到 {symbol}[/yellow]")
@@ -275,7 +273,7 @@ def _ticker_detail(ak: AKShareProvider, cg: CoinGeckoProvider, ticker: str):
     # HK stock
     if market == "HK":
         try:
-            df = ak.get_hk_stock_spot()
+            df = gw.get_hk_stock_spot()
             row = df[df["代码"] == symbol]
             if row.empty:
                 row = df[df["代码"] == symbol.zfill(5)]
@@ -291,7 +289,7 @@ def _ticker_detail(ak: AKShareProvider, cg: CoinGeckoProvider, ticker: str):
     # US stock
     if market == "US":
         try:
-            df = ak.get_us_stock_spot()
+            df = gw.get_us_stock_spot()
             row = df[df["代码"] == symbol.upper()]
             if not row.empty:
                 _show_detail_row(row.iloc[0])
@@ -368,7 +366,7 @@ def _show_detail_row(r):
 
 # ==== Mode: watchlist ====
 
-def _watchlist(ak: AKShareProvider, cg: CoinGeckoProvider, path: str):
+def _watchlist(gw: DataGateway, path: str):
     import os
     if not os.path.exists(path):
         console.print(f"[red]文件不存在: {path}[/red]")
@@ -403,7 +401,7 @@ def _watchlist(ak: AKShareProvider, cg: CoinGeckoProvider, path: str):
         if market == "CN":
             if cn_df is None:
                 try:
-                    cn_df = ak.get_a_share_spot()
+                    cn_df = gw.get_a_share_spot()
                 except Exception:
                     pass
             row = cn_df[cn_df["代码"] == symbol] if cn_df is not None else None
@@ -418,7 +416,7 @@ def _watchlist(ak: AKShareProvider, cg: CoinGeckoProvider, path: str):
         elif market == "HK":
             if hk_df is None:
                 try:
-                    hk_df = ak.get_hk_stock_spot()
+                    hk_df = gw.get_hk_stock_spot()
                 except Exception:
                     pass
             row = hk_df[hk_df["代码"] == symbol] if hk_df is not None else None
@@ -432,7 +430,7 @@ def _watchlist(ak: AKShareProvider, cg: CoinGeckoProvider, path: str):
 
         elif raw.upper() in ("BTC", "ETH"):
             try:
-                md = cg.get_market_data(raw.upper())
+                md = gw.get_crypto_market_data(raw.upper())
                 if md:
                     wl_table.add_row(raw.upper(), raw.upper(),
                                      _fmt_price(md.get("price")),
@@ -470,17 +468,15 @@ def spot(ticker: str, market: str, watchlist: str, limit: int):
       spot AAPL         美股个股行情
       spot -w config/watchlist.txt  自选股行情
     """
-    cache = DataCache()
-    ak = AKShareProvider(cache=cache)
-    cg = CoinGeckoProvider(cache=cache)
+    gw = DataGateway()
 
     if watchlist:
-        return _watchlist(ak, cg, watchlist)
+        return _watchlist(gw, watchlist)
 
     if market:
-        return _market_movers(ak, market, limit)
+        return _market_movers(gw, market, limit)
 
     if ticker:
-        return _ticker_detail(ak, cg, ticker)
+        return _ticker_detail(gw, ticker)
 
     _overview()

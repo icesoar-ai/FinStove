@@ -6,7 +6,7 @@ from rich.table import Table
 from datetime import date, timedelta
 
 from src.data.storage import ParquetStorage
-from src.data.providers.akshare import AKShareProvider
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -145,9 +145,10 @@ def market_scan(group: str = None):
             ("000001", "上证指数"), ("399001", "深证成指"), ("000300", "沪深300"),
             ("399006", "创业板指"), ("000688", "科创50"), ("000016", "上证50"),
         ]
-        ak = AKShareProvider()
+        gw = DataGateway()
+        from src.data.base import Market
         for code, name in cn_indexes:
-            df = ak.get_index_daily(code)
+            df = gw.get_index(Market.CN, code)
             if df is not None and not df.empty and "close" in df.columns:
                 close = df["close"].astype(float)
                 latest = float(close.iloc[-1])

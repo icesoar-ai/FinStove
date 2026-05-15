@@ -5,8 +5,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.data.cache import DataCache
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -33,12 +32,8 @@ def forex_data(pair: str, start: str, end: str, spot: bool):
 
     不带参数：拉取全部 9 个汇率对。
     """
-    from src.data.providers.yfinance import YFinanceProvider
-
     end = end or date.today().strftime("%Y-%m-%d")
-    cache = DataCache()
-    storage = ParquetStorage()
-    yf = YFinanceProvider(cache=cache, storage=storage)
+    gw = DataGateway()
 
     if pair:
         pairs = [pair.upper()]
@@ -50,7 +45,7 @@ def forex_data(pair: str, start: str, end: str, spot: bool):
         console.print(f"[bold]Fetching {p} ({name})[/bold]")
 
         try:
-            df = yf.get_forex_daily(p, start=start, end=end)
+            df = gw.get_forex_daily(p, start=start, end=end, force=True)
 
             if df is None or df.empty:
                 console.print(f"[yellow]  No data for {p}[/yellow]")
@@ -83,7 +78,7 @@ def forex_data(pair: str, start: str, end: str, spot: bool):
 
             # Spot snapshot
             if spot:
-                _save_spot_forex(cache, storage, p)
+                _save_spot_forex(gw, p)
 
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
@@ -96,16 +91,13 @@ _FOREX_SPOT_KW = {
 }
 
 
-def _save_spot_forex(cache, storage, pair: str):
-    from src.data.providers.akshare import AKShareProvider
+def _save_spot_forex(gw: DataGateway, pair: str):
     try:
-        ak = AKShareProvider(cache=cache)
-        fx_df = ak.get_forex_spot()
+        fx_df = gw.get_forex_spot()
         kw = _FOREX_SPOT_KW.get(pair, pair)
         row = fx_df[fx_df["名称"].str.contains(kw, na=False)]
         if not row.empty:
-            storage.save(row.head(1), "forex", "global", pair, "spot")
-            console.print(f"  [dim]Spot snapshot saved[/dim]")
+            console.print(f"  [dim]Spot snapshot acquired for {pair}[/dim]")
         else:
             console.print(f"  [yellow]Spot data not found for {pair}[/yellow]")
     except Exception as e:

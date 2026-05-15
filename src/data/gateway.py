@@ -627,47 +627,56 @@ class DataGateway:
 
     # ── 加密货币 ───────────────────────────────────────
 
-    def get_crypto(self, symbol: str) -> pd.DataFrame:
-        """加密货币，YFinance 优先，降级 CoinGecko。"""
+    def get_crypto(self, symbol: str, start: str = "2015-01-01",
+                   end: Optional[str] = None,
+                   source: str = "yfinance", force: bool = False) -> pd.DataFrame:
+        """加密货币日线 OHLCV. YFinance 优先，降级 CoinGecko。"""
+        end = end or date.today().strftime("%Y-%m-%d")
         sym = symbol.upper()
-        df = self._read_or_fetch(
-            "crypto", "global", sym, "daily",
-            "yfinance", self._yf.get_crypto_daily, symbol,
-            start_date="2015-01-01",
-        )
+        if source == "coingecko":
+            df = self._try("_cg", self._cg.get_historical_ohlcv, sym)
+            return df if df is not None else pd.DataFrame()
+        if force:
+            df = self._force_fetch("crypto", "global", sym, "daily", "yfinance",
+                                   self._yf.get_crypto_daily, symbol, start, end)
+        else:
+            df = self._read_or_fetch(
+                "crypto", "global", sym, "daily",
+                "yfinance", self._yf.get_crypto_daily, symbol, start, end,
+            )
         if df is None or df.empty:
             df = self._try("_cg", self._cg.get_historical, symbol, days=365)
         return df if df is not None else pd.DataFrame()
 
     # ── 外汇 / 商品 / 市场概览 ──────────────────────────────
 
-    def get_forex_daily(self, pair: str, force: bool = False) -> pd.DataFrame:
+    def get_forex_daily(self, pair: str, start: str = "2010-01-01",
+                        end: Optional[str] = None, force: bool = False) -> pd.DataFrame:
         """外汇日线 OHLCV."""
-        mkt = "global"
+        end = end or date.today().strftime("%Y-%m-%d")
         sym = pair.upper()
         if force:
-            df = self._force_fetch("forex", mkt, sym, "daily", "yfinance",
-                                   self._yf.get_forex_daily, pair)
+            df = self._force_fetch("forex", "global", sym, "daily", "yfinance",
+                                   self._yf.get_forex_daily, pair, start, end)
         else:
             df = self._read_or_fetch(
-                "forex", mkt, sym, "daily",
-                "yfinance", self._yf.get_forex_daily, pair,
-                start_date="2010-01-01",
+                "forex", "global", sym, "daily",
+                "yfinance", self._yf.get_forex_daily, pair, start, end,
             )
         return df if df is not None else pd.DataFrame()
 
-    def get_commodity_daily(self, symbol: str, force: bool = False) -> pd.DataFrame:
+    def get_commodity_daily(self, symbol: str, start: str = "2010-01-01",
+                            end: Optional[str] = None, force: bool = False) -> pd.DataFrame:
         """商品日线 OHLCV."""
-        mkt = "global"
+        end = end or date.today().strftime("%Y-%m-%d")
         sym = symbol.upper()
         if force:
-            df = self._force_fetch("commodity", mkt, sym, "daily", "yfinance",
-                                   self._yf.get_commodity_daily, symbol)
+            df = self._force_fetch("commodity", "global", sym, "daily", "yfinance",
+                                   self._yf.get_commodity_daily, symbol, start, end)
         else:
             df = self._read_or_fetch(
-                "commodity", mkt, sym, "daily",
-                "yfinance", self._yf.get_commodity_daily, symbol,
-                start_date="2010-01-01",
+                "commodity", "global", sym, "daily",
+                "yfinance", self._yf.get_commodity_daily, symbol, start, end,
             )
         return df if df is not None else pd.DataFrame()
 
@@ -678,6 +687,10 @@ class DataGateway:
     def get_us_stock_spot(self) -> pd.DataFrame:
         """美股实时快照."""
         return self._ak.get_us_stock_spot()
+
+    def get_a_share_spot(self) -> pd.DataFrame:
+        """A股全部个股实时行情."""
+        return self._ak.get_a_share_spot()
 
     def get_forex_spot(self) -> pd.DataFrame:
         """外汇实时快照."""
@@ -694,6 +707,10 @@ class DataGateway:
     def get_crypto_market_data(self, symbol: str) -> Optional[dict]:
         """加密货币详细市场数据."""
         return self._cg.get_market_data(symbol)
+
+    def get_yield_curve(self) -> dict[str, Optional[float]]:
+        """美国国债收益率曲线 (最新快照)."""
+        return self._fred.get_yield_curve()
 
     def get_yield_curve_history(self) -> pd.DataFrame:
         """美国国债收益率曲线历史."""

@@ -5,8 +5,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.data.cache import DataCache
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -34,12 +33,8 @@ def commodity_data(symbol: str, start: str, end: str, spot: bool):
 
     不带参数：拉取全部品种。
     """
-    from src.data.providers.yfinance import YFinanceProvider
-
     end = end or date.today().strftime("%Y-%m-%d")
-    cache = DataCache()
-    storage = ParquetStorage()
-    yf = YFinanceProvider(cache=cache, storage=storage)
+    gw = DataGateway()
 
     if symbol:
         symbols = [symbol.upper()]
@@ -51,7 +46,7 @@ def commodity_data(symbol: str, start: str, end: str, spot: bool):
         console.print(f"[bold]Fetching {sym} ({name})[/bold]")
 
         try:
-            df = yf.get_commodity_daily(sym, start=start, end=end)
+            df = gw.get_commodity_daily(sym, start=start, end=end, force=True)
 
             if df is None or df.empty:
                 console.print(f"[yellow]  No data for {sym}[/yellow]")
@@ -81,7 +76,7 @@ def commodity_data(symbol: str, start: str, end: str, spot: bool):
 
             # Spot snapshot
             if spot:
-                _save_spot_commodity(cache, storage, sym)
+                _save_spot_commodity(gw, sym)
 
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
@@ -95,16 +90,13 @@ _COMMODITY_SPOT_KW = {
 }
 
 
-def _save_spot_commodity(cache, storage, sym: str):
-    from src.data.providers.akshare import AKShareProvider
+def _save_spot_commodity(gw: DataGateway, sym: str):
     try:
-        ak = AKShareProvider(cache=cache)
-        fut_df = ak.get_futures_spot()
+        fut_df = gw.get_futures_spot()
         kw = _COMMODITY_SPOT_KW.get(sym, sym)
         row = fut_df[fut_df["名称"].str.contains(kw, na=False)]
         if not row.empty:
-            storage.save(row.head(1), "commodity", "global", sym, "spot")
-            console.print(f"  [dim]Spot snapshot saved[/dim]")
+            console.print(f"  [dim]Spot snapshot acquired for {sym}[/dim]")
         else:
             console.print(f"  [yellow]Spot data not found for {sym}[/yellow]")
     except Exception as e:

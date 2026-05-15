@@ -5,8 +5,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.data.cache import DataCache
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -35,11 +34,8 @@ def crypto_data(symbol: str, start: str, end: str, source: str, spot: bool):
     默认数据源 yfinance，--source coingecko 可获取市值数据。
     不带参数：拉取 BTC + ETH。
     """
-    from src.data.providers.yfinance import YFinanceProvider
-
     end = end or date.today().strftime("%Y-%m-%d")
-    cache = DataCache()
-    storage = ParquetStorage()
+    gw = DataGateway()
 
     if symbol:
         symbols = [symbol.upper()]
@@ -51,13 +47,7 @@ def crypto_data(symbol: str, start: str, end: str, source: str, spot: bool):
         console.print(f"[bold]Fetching {sym} ({name})[/bold]")
 
         try:
-            if source == "coingecko":
-                from src.data.providers.coingecko import CoinGeckoProvider
-                cg = CoinGeckoProvider(cache=cache, storage=storage)
-                df = cg.get_historical_ohlcv(sym)
-            else:
-                yf = YFinanceProvider(cache=cache, storage=storage)
-                df = yf.get_crypto_daily(sym, start=start, end=end)
+            df = gw.get_crypto(sym, start=start, end=end, source=source, force=True)
 
             if df is None or df.empty:
                 console.print(f"[yellow]  No data for {sym}[/yellow]")
@@ -95,29 +85,17 @@ def crypto_data(symbol: str, start: str, end: str, source: str, spot: bool):
 
             # Spot snapshot
             if spot:
-                _save_spot_crypto(cache, storage, sym)
+                _save_spot_crypto(gw, sym)
 
         except Exception as e:
             console.print(f"[red]  Error: {e}[/red]")
 
 
-def _save_spot_crypto(cache, storage, sym: str):
-    import pandas as pd
-    from src.data.providers.coingecko import CoinGeckoProvider
+def _save_spot_crypto(gw: DataGateway, sym: str):
     try:
-        cg = CoinGeckoProvider(cache=cache)
-        md = cg.get_market_data(sym)
+        md = gw.get_crypto_market_data(sym)
         if md:
-            spot_df = pd.DataFrame([{
-                "symbol": sym,
-                "price": md.get("price"),
-                "change_24h": md.get("change_24h"),
-                "change_7d": md.get("change_7d"),
-                "market_cap": md.get("market_cap"),
-                "volume_24h": md.get("volume_24h"),
-            }])
-            storage.save(spot_df, "crypto", "global", sym, "spot")
-            console.print(f"  [dim]Spot snapshot saved[/dim]")
+            console.print(f"  [dim]Spot snapshot acquired for {sym}[/dim]")
         else:
             console.print(f"  [yellow]Spot data not found for {sym}[/yellow]")
     except Exception as e:
