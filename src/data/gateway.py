@@ -15,6 +15,15 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
+# Load .env for API keys (FRED_API_KEY, COINGECKO_API_KEY, etc.)
+_env_path = Path(__file__).resolve().parents[2] / ".env"
+if _env_path.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env_path)
+    except ImportError:
+        pass
+
 logger = logging.getLogger(__name__)
 
 import pandas as pd
@@ -252,7 +261,8 @@ class DataGateway:
             if force:
                 df = self._fetch_and_save(
                     "index", m, s, "daily",
-                    "yfinance", self._yf.get_index_daily, s, m,
+                    "_yf", self._yf.get_index_daily, s, m,
+                    start="2010-01-01",
                 )
             else:
                 df = self._read_or_fetch(
