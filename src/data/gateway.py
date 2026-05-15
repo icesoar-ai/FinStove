@@ -353,11 +353,15 @@ class DataGateway:
     # ── ETF ─────────────────────────────────────────
 
     def get_etf_daily(self, code: str, market: Market) -> pd.DataFrame:
-        """ETF 日线 OHLCV. CN ETF via AKShare with rate limiting."""
+        """ETF 日线 OHLCV. CN: AKShare → yfinance fallback. US: yfinance."""
         mkt = market.value
         dir_name = market_dir(market, code)
         if mkt == "cn":
             df = self._try("_etf", self._etf.get_daily, code, mkt)
+            if df is None or df.empty:
+                # Fallback to yfinance
+                df = self._try("_yf", self._yf.get_daily, code, mkt,
+                               store_symbol=dir_name)
         else:
             df = self._etf.get_daily(code, mkt)
         if df is not None and not df.empty:
