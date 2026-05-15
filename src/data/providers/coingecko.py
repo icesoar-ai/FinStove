@@ -219,7 +219,7 @@ class CoinGeckoProvider:
         if not coin_id:
             return pd.DataFrame()
 
-        store_symbol = f"{symbol.lower()}_{coin_id}"
+        store_symbol = symbol.upper()
         existing = self._storage.load("crypto", "global", store_symbol, "daily")
         if not existing.empty:
             _, last_date = self._storage.get_date_range("crypto", "global", store_symbol, "daily")
