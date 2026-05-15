@@ -16,33 +16,34 @@
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────────┐  │
 │  │ _read_or_   │  │ _force_fetch │  │ _try() — 限速 + 退避 + 异常捕获 │  │
 │  │ fetch()     │  │              │  │   降级: AK→YF→BS / YF→CG        │  │
-│  └─────────────┘  └──────────────┘  └────────────┬───────────────────┘  │
-│                                                   │                      │
-│  ┌──────────────────────────┐                     │                      │
-│  │      RateLimiter          │ ◄──────────────────┘                      │
-│  │  (src/data/rate_limiter.py)│  读 config/providers.yaml                │
-│  └──────────────────────────┘                                            │
+│  └──────┬──────┘  └──────┬───────┘  └────────────┬───────────────────┘  │
+│         │                 │                       │                      │
+│         │    ┌────────────┴───────────┐           │                      │
+│         │    │  ParquetStorage        │           │                      │
+│         │    │  (统一读写 Parquet)     │           │                      │
+│         │    │  load / save /         │           │                      │
+│         │    │  merge_and_save        │           │                      │
+│         │    └────────────────────────┘           │                      │
+│         │                                         │                      │
+│  ┌──────┴──────────────────────────┐              │                      │
+│  │      RateLimiter                │ ◄────────────┘                      │
+│  │  (src/data/rate_limiter.py)     │  读 config/providers.yaml           │
+│  └─────────────────────────────────┘                                     │
 └────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┬───────────────────┘
      │      │      │      │      │      │      │      │
      ▼      ▼      ▼      ▼      ▼      ▼      ▼      ▼
 ┌─────┐ ┌─────┐ ┌────┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌──────┐
-│ AK  │ │ YF  │ │FRED│ │CG │ │CN │ │SEC│ │BS │ │ News │    ← Data Providers
-│Share│ │Fin. │ │    │ │   │ │INFO│ │ED-│ │   │ │      │      (src/data/providers/)
-│     │ │     │ │    │ │   │ │    │ │GAR│ │   │ │      │
+│ AK  │ │ YF  │ │FRED│ │CG │ │CN │ │SEC│ │BS │ │ News │    ← Providers
+│Share│ │Fin. │ │    │ │   │ │INFO│ │ED-│ │   │ │      │      (纯抓取，返回 DataFrame)
+│     │ │     │ │    │ │   │ │    │ │GAR│ │   │ │      │      不读写 Parquet
 └──┬──┘ └──┬──┘ └──┬─┘ └─┬─┘ └─┬─┘ └─┬─┘ └─┬─┘ └──┬───┘
+   │       │       │     │     │     │     │       │
    │       │       │     │     │     │     │       │
    ▼       ▼       ▼     ▼     ▼     ▼     ▼       ▼
 ┌─────────────────────────────────────────────────────────┐
-│              DataCache                                   │    ← SQLite 缓存
+│              DataCache (API 去重)                        │    ← SQLite 缓存
 │         (~/.cache/stocks/)                               │      (src/data/cache.py)
-│          API 请求去重 + TTL                              │
-└─────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│            ParquetStorage                                │    ← 持久化存储
-│           (data/*.parquet)                                │      (src/data/storage.py)
-│        增量合并 (merge_and_save)                          │
+│          Provider 内部 _cached() 调用                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -51,14 +52,16 @@
 ```
 CLI analyze 命令
   → gw.get_daily(symbol, market)
-     → Parquet.load("stock", market, dir_name, "daily")
-         ├─ 有 + 日期够新 → 直接返回
-         └─ 无 / 过期
-              → Provider API
-                   → standardize(df)
-                        → DataCache.set(TTL)
-                        → Parquet.merge_and_save()
-                        → 返回 DataFrame
+     → _read_or_fetch()
+          → Parquet.load()  ← Gateway 负责全部 I/O
+               ├─ 有 + 新鲜 → 直接返回
+               └─ 无 / 过期
+                    → 计算增量 start_date (last + 1 day)
+                    → Provider API 抓取  ← Provider 只返回 DataFrame
+                         → standardize(df)
+                         → DataCache.set(TTL)
+                         → Parquet.merge_and_save()  ← Gateway 写回
+                         → 返回 DataFrame
 ```
 
 ## 写路径 (强制刷新)
@@ -66,9 +69,10 @@ CLI analyze 命令
 ```
 CLI fetch 命令
   → gw.get_daily(symbol, market, force=True)
-     → Provider API (跳过 Parquet 检查)
-          → standardize(df)
-               → Parquet.merge_and_save()
+     → _force_fetch()
+          → Provider API (跳过 Parquet 检查)
+               → standardize(df)
+               → Parquet.merge_and_save()  ← Gateway 写回
                → 返回 DataFrame
 ```
 
@@ -78,24 +82,19 @@ CLI fetch 命令
 请求 fetch 600519.SH
         │
         ▼
-  Parquet 有数据？
-   ┌─────┴─────┐
-  是           否
-   │            │
-   ▼            ▼
-查到最新日期   全量请求 API
-   │            │
-   │            ▼
-   │        _cached() 先查 SQLite
-   │         ┌──命中：直接返回
-   │         └──未命中：调 API
-   │                    │
-   ▼                    ▼
-只请求 [last+1, today]  合并去重 → 写 Parquet + 写 SQLite
-   │
-   ▼
-合并新数据 → 写回 Parquet
-返回合并后的完整数据
+  Gateway._read_or_fetch()
+        │
+        ├─ Parquet.load() — Gateway 检查存量
+        │    ├─ 有 + 新鲜 → 直接返回
+        │    └─ 有 + 过期 → 计算 start = last_date + 1
+        │         └─ 只拉 [start, today]
+        └─ 无 → 全量拉取
+        │
+        ▼
+  Provider.fetch(symbol, start, end) — 纯抓取，返回 DataFrame
+        │
+        ▼
+  Gateway.merge_and_save() — 合并去重 → 写 Parquet
 ```
 
 三种缓存状态下的行为：
@@ -112,24 +111,25 @@ SQLite 丢了不影响数据完整性，只会多一两次 API 请求。
 
 ```
 gw.get_daily("603650", Market.CN)
-  → AKShareProvider.get_daily("603650")
-      ├─ 成功 → 返回
-      └─ 异常/空
-           → YFinanceProvider.get_daily("603650", "cn", store_symbol="603650_彤程新材")
-                ├─ 成功 → 返回
-                └─ 异常/空
-                     → BaostockProvider.get_daily("603650", store_symbol="603650_彤程新材")
-                          → baostock API (免费免注册)
-                          → Parquet.merge_and_save(→ .../603650_彤程新材/daily.parquet)
+  → Gateway._read_or_fetch()
+      → AKShareProvider.get_daily("603650")
+           ├─ 成功 → Gateway.merge_and_save() → 返回
+           └─ 异常/空
+                → YFinanceProvider.get_daily("603650", "cn")
+                     ├─ 成功 → Gateway.merge_and_save() → 返回
+                     └─ 异常/空
+                          → BaostockProvider.get_daily("603650")
+                               → baostock API (免费免注册)
+                               → Gateway.merge_and_save(→ .../603650_彤程新材/daily.parquet)
 ```
 
 ## 数据生命周期
 
 ```
-API 请求 → DataCache (去重) → ParquetStorage (持久化)
-                │                    │
-                TTL 过期自动清理    永久保留，按日期去重
-                绕过去重请求        支持增量追加
+Provider API 请求
+    → DataCache 去重 (Provider 内部 _cached)
+    → Gateway 检查 Parquet 存量 → 计算增量起点
+    → Gateway.merge_and_save() — 持久化，按日期去重，支持增量追加
 ```
 
 ---
@@ -256,15 +256,17 @@ API 请求 → DataCache (去重) → ParquetStorage (持久化)
 | 组件 | 文件 | 职责 |
 |------|------|------|
 | CLI Commands | `src/cli/commands/*.py` | 用户交互，参数解析，Rich 输出 |
-| DataGateway | `src/data/gateway.py` | 统一入口，降级策略，数据路由 |
-| AKShareProvider | `src/data/providers/akshare.py` | A股/宏观/指数 |
-| YFinanceProvider | `src/data/providers/yfinance.py` | 全球股票/商品/外汇/加密 |
-| FREDProvider | `src/data/providers/fred.py` | 美国宏观 |
-| CoinGeckoProvider | `src/data/providers/coingecko.py` | 加密货币行情 |
-| CNINFOProvider | `src/data/providers/cninfo.py` | A股年报 PDF/MD |
-| SECEDGARProvider | `src/data/providers/edgar.py` | 美股 10-K 年报 |
-| BaostockProvider | `src/data/providers/baostock.py` | A股日线，三级降级 |
+| DataGateway | `src/data/gateway.py` | 统一入口，降级策略，**全部 Parquet 读写** |
+| AKShareProvider | `src/data/providers/akshare.py` | A股/宏观/指数 — 纯 API 抓取 |
+| YFinanceProvider | `src/data/providers/yfinance.py` | 全球股票/商品/外汇/加密 — 纯 API 抓取 |
+| FREDProvider | `src/data/providers/fred.py` | 美国宏观 — 纯 API 抓取 |
+| CoinGeckoProvider | `src/data/providers/coingecko.py` | 加密货币行情 — 纯 API 抓取 |
+| CNINFOProvider | `src/data/providers/cninfo.py` | A股年报 PDF/MD — 纯下载 |
+| SECEDGARProvider | `src/data/providers/edgar.py` | 美股 10-K 年报 — 纯下载 |
+| BaostockProvider | `src/data/providers/baostock.py` | A股日线，三级降级 — 纯 API 抓取 |
 | NewsProvider | `src/data/providers/news.py` | 新闻抓取 |
 | RateLimiter | `src/data/rate_limiter.py` | 每 Provider 限速/退避/冷却 |
-| DataCache | `src/data/cache.py` | API 请求缓存，TTL 控制 |
-| ParquetStorage | `src/data/storage.py` | 数据持久化，增量合并 |
+| DataCache | `src/data/cache.py` | API 请求缓存 (diskcache)，TTL 控制 |
+| ParquetStorage | `src/data/storage.py` | Parquet 持久化 + 增量合并，**仅被 Gateway 调用** |
+
+> **I/O 职责分离：** Provider 不碰 Parquet——只从外部 API 抓取数据返回 DataFrame。Gateway 统一负责检查存量、决定增量起点、合并写入 Parquet。消除了此前的双重写入问题。

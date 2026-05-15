@@ -55,7 +55,7 @@
 ## 项目结构
 
 ```
-src/data/           # 数据层 (gateway → providers: akshare/yfinance/cninfo/fred/coingecko/news → cache → parquet)
+src/data/           # 数据层 (gateway 统一读写 Parquet → providers: akshare/yfinance/cninfo/fred/coingecko/news 纯抓取)
 src/analysis/       # 分析模块 (11个维度)
   fundamental/      # 估值子模块 (10个方法 + 聚合器)
 src/integration/    # 集成层 (scorer → aggregator → report)
