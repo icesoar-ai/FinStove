@@ -181,7 +181,7 @@ class DataGateway:
                 )
             else:
                 df = self._read_or_fetch(
-                    "stock", market.value, symbol, "daily",
+                    "stock", market.value, dir_name, "daily",
                     "yfinance", self._yf.get_daily, symbol, market.value, start_fmt, end_fmt,
                 )
         return df if df is not None else pd.DataFrame()
