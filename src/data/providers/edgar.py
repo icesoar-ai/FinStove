@@ -24,8 +24,9 @@ class SECEDGARProvider:
     # Reverse lookup: form code → report_type key
     _FORM_TO_REPORT = {v: k for k, v in FORM_TYPE_MAP.items()}
 
-    def __init__(self):
+    def __init__(self, data_dir: str = "data/stock"):
         self._cik_cache: dict[str, str] = {}
+        self._data_dir = data_dir
 
     def _get_cik(self, ticker: str) -> Optional[str]:
         """Resolve ticker to CIK using SEC's company_tickers.json."""
@@ -105,7 +106,7 @@ class SECEDGARProvider:
         except Exception:
             return []
 
-    def download_filings(self, ticker: str, data_dir: str = "data/stock",
+    def download_filings(self, ticker: str,
                          since_year: Optional[int] = None,
                          form_types: Optional[list[str]] = None) -> list[dict]:
         """Download SEC filings (10-K and/or 10-Q) for a ticker.
@@ -113,7 +114,7 @@ class SECEDGARProvider:
         Saves to data_dir/us/{ticker}/reports/{filename}.txt
         """
         results = self.list_filings(ticker, form_types=form_types, since_year=since_year)
-        ticker_dir = Path(data_dir) / "us" / ticker / "reports"
+        ticker_dir = Path(self._data_dir) / "us" / ticker / "reports"
         ticker_dir.mkdir(parents=True, exist_ok=True)
 
         for r in results:
