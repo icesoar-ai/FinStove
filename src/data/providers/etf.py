@@ -16,7 +16,7 @@ class ETFProvider:
         """ETF OHLCV 日线.
 
         A股: AKShare fund_etf_hist_em.
-        美股: yfinance.
+        美股/yf: yfinance (no disk write).
         """
         if market == "cn":
             import akshare as ak
@@ -37,16 +37,25 @@ class ETFProvider:
                     "收盘": "close", "成交量": "volume",
                 })
         else:
-            import yfinance as yf
-            tk = yf.Ticker(code)
-            df = tk.history(period="max")
-            if df is not None and not df.empty:
-                df = df.reset_index()
-                df["Date"] = pd.to_datetime(df["Date"]).dt.date
-                df = df.rename(columns={
-                    "Date": "date", "Open": "open", "High": "high",
-                    "Low": "low", "Close": "close", "Volume": "volume",
-                })
+            df = self._yf_daily(code, market)
+        return df if df is not None else pd.DataFrame()
+
+    def _yf_daily(self, code: str, market: str = "us") -> pd.DataFrame:
+        """Fetch daily from yfinance. No disk write — caller handles storage."""
+        import yfinance as yf
+        # Build yfinance ticker: 510050.SS (Shanghai), 159919.SZ (Shenzhen)
+        if market == "yf":
+            suffix = "SS" if code[0] in ("5", "6", "8", "9") else "SZ"
+            code = f"{code}.{suffix}"
+        tk = yf.Ticker(code)
+        df = tk.history(period="max")
+        if df is not None and not df.empty:
+            df = df.reset_index()
+            df["Date"] = pd.to_datetime(df["Date"]).dt.date
+            df = df.rename(columns={
+                "Date": "date", "Open": "open", "High": "high",
+                "Low": "low", "Close": "close", "Volume": "volume",
+            })
         return df if df is not None else pd.DataFrame()
 
     def get_nav(self, code: str, market: str) -> pd.DataFrame:

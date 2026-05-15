@@ -353,14 +353,14 @@ class DataGateway:
     # ── ETF ─────────────────────────────────────────
 
     def get_etf_daily(self, code: str, market: Market) -> pd.DataFrame:
-        """ETF 日线 OHLCV. CN: AKShare → yfinance fallback (no disk write). US: yfinance."""
+        """ETF 日线 OHLCV. CN: AKShare → yfinance fallback. US: yfinance."""
         mkt = market.value
         dir_name = market_dir(market, code)
         if mkt == "cn":
             df = self._try("_etf", self._etf.get_daily, code, mkt)
             if df is None or df.empty:
-                # Fallback: ETF provider's US path uses yfinance without writing to stock/
-                df = self._etf.get_daily(code, "us")
+                # Fallback goes through ETF provider's yfinance path (no disk write)
+                df = self._etf._yf_daily(code, "yf")
         else:
             df = self._etf.get_daily(code, mkt)
         if df is not None and not df.empty:
