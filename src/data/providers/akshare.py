@@ -534,3 +534,45 @@ class AKShareProvider:
             df = df.sort_values("datetime").reset_index(drop=True)
 
         return df
+
+    # ---- HK Stock ----
+
+    def get_hk_financials(self, symbol: str) -> dict[str, pd.DataFrame]:
+        """港股三张表 — 资产负债表 / 利润表 / 现金流量表.
+
+        Data source: AKShare (东方财富 港股).
+        """
+        import akshare as ak
+
+        sheets = {
+            "balance_sheet": "资产负债表",
+            "income":        "利润表",
+            "cashflow":      "现金流量表",
+        }
+        result = {}
+        for key, sheet_name in sheets.items():
+            try:
+                df = ak.stock_financial_hk_report_em(
+                    stock=symbol, symbol=sheet_name, indicator="年度"
+                )
+                if df is not None and not df.empty:
+                    result[key] = df
+            except Exception:
+                pass
+        return result
+
+    def get_hk_indicators(self, symbol: str) -> pd.DataFrame:
+        """港股财务指标 — 36 列 (ROE/ROA/EPS/营收/净利润/资产负债率等).
+
+        Data source: AKShare (东方财富 港股).
+        """
+        import akshare as ak
+        return ak.stock_financial_hk_analysis_indicator_em(symbol=symbol)
+
+    def get_hk_dividends(self, symbol: str) -> pd.DataFrame:
+        """港股分红记录.
+
+        Data source: AKShare (东方财富 港股).
+        """
+        import akshare as ak
+        return ak.stock_hk_dividend_payout_em(symbol=symbol)
