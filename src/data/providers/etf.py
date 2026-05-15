@@ -5,8 +5,6 @@ from typing import Optional
 
 import pandas as pd
 
-from src.utils.ticker import market_dir
-
 
 class ETFProvider:
     """ETF data: OHLCV, NAV, holdings, spot."""
@@ -22,7 +20,16 @@ class ETFProvider:
         """
         if market == "cn":
             import akshare as ak
-            df = ak.fund_etf_hist_em(symbol=code)
+            import time
+            for attempt in range(3):
+                try:
+                    df = ak.fund_etf_hist_em(symbol=code)
+                    break
+                except Exception:
+                    if attempt < 2:
+                        time.sleep(2 * (attempt + 1))
+            else:
+                return pd.DataFrame()
             if df is not None and not df.empty:
                 df = df.rename(columns={
                     "日期": "date", "开盘": "open",
@@ -61,7 +68,8 @@ class ETFProvider:
         """
         if market == "cn":
             import akshare as ak
-            return ak.fund_portfolio_hold_em(symbol=code, date="2025")
+            from datetime import date
+            return ak.fund_portfolio_hold_em(symbol=code, date=str(date.today().year))
         return pd.DataFrame()
 
     def get_spot(self) -> pd.DataFrame:
