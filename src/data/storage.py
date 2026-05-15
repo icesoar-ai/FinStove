@@ -48,8 +48,8 @@ class ParquetStorage:
     # ── Internal ─────────────────────────────────────
 
     def _path(self, asset_type: str, market: str, symbol: str, data_type: str) -> Path:
-        """Parquet file path. For stock/ETF, symbol is resolved via stock_dir."""
-        return self.file_path(asset_type, market, symbol, data_type)
+        """Parquet file path. symbol is already the directory name (pre-resolved by caller)."""
+        return self.base / asset_type / market / symbol / f"{data_type}.parquet"
 
     # ---- Read ----
 

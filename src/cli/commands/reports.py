@@ -97,5 +97,4 @@ def reports(ticker: str, report_type: str, years: str):
         if md_count > 0:
             console.print(f"\n[dim]PDF + Markdown 存储于 data/stock/cn/{stock_dir(symbol)}/reports/[/dim]")
     else:
-        from src.utils.ticker import stock_dir
         console.print(f"\n[dim]文本存储于 data/stock/us/{stock_dir(symbol)}/reports/[/dim]")
