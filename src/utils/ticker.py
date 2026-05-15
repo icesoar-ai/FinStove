@@ -80,20 +80,30 @@ def get_stock_name(symbol: str) -> str:
         return ""
 
 
-def stock_dir(symbol: str) -> str:
-    """Return stock directory name: code + short name, e.g. '600388_龙净环保'."""
-    name = get_stock_name(symbol)
-    if name:
-        return f"{symbol}_{name}"
-    return symbol
+def stock_dir(code: str) -> str:
+    """Return storage directory name: {code}.{suffix}.
+
+    CN codes: 6xx/8xx/9xx → SH, 0xx/3xx → SZ
+    HK codes: ≤5 digit codes → HK
+    US/JP/UK etc: alphabetic → US by default
+
+    Examples:
+        "601318" → "601318.SH"
+        "000002" → "000002.SZ"
+        "00700"  → "00700.HK"
+        "AAPL"   → "AAPL.US"
+    """
+    if code.isdigit():
+        if len(code) <= 5:
+            return f"{code}.HK"
+        suffix = "SH" if code[0] in ("6", "8", "9") else "SZ"
+        return f"{code}.{suffix}"
+    return f"{code}.US"
 
 
 def market_dir(market: Market, code: str) -> str:
     """Return storage directory name: {code}.{market}.
 
-    Examples:
-        market_dir(Market.HK, "00700") → "00700.HK"
-        market_dir(Market.US, "AAPL") → "AAPL.US"
-        market_dir(Market.JP, "7203") → "7203.JP"
+    Deprecated: use stock_dir(code) instead for code-based auto-detection.
     """
-    return f"{code}.{market.value}"
+    return stock_dir(code)

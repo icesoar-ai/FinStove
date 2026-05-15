@@ -144,13 +144,8 @@ class DataGateway:
         # Normalize date formats
         start_fmt = self._normalize_date(start)
         end_fmt = self._normalize_date(end)
-        # HK and new markets use {code}.{market}; US/others keep bare symbol for compat
-        if market == Market.CN:
-            dir_name = stock_dir(symbol)
-        elif market == Market.HK:
-            dir_name = market_dir(market, symbol)
-        else:
-            dir_name = symbol
+        # Unified: all markets → {code}.{suffix} via stock_dir
+        dir_name = stock_dir(symbol)
 
         if market == Market.CN:
             # AKShare uses YYYYMMDD
