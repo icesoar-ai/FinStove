@@ -39,12 +39,12 @@ OUTLOOK_NEG = ["下滑", "亏损", "缩减", "收缩", "困难", "挑战"]
 
 
 def _find_latest_report(ticker_dir: str) -> Optional[Path]:
-    """Find the most recent year's annual report MD file."""
+    """Find the most recent report MD file (any type: annual/semi-annual/quarterly)."""
     reports_dir = Path(f"data/stock/cn/{ticker_dir}/reports")
     if not reports_dir.exists():
         return None
-    files = sorted(reports_dir.glob("*年年度报告*.md"))
-    # Prefer full reports over summaries, non-补充 versions
+    files = sorted(reports_dir.glob("*.md"))
+    # Prefer non-summary, non-补充 (supplement) versions
     full = [f for f in files if "摘要" not in f.name and "补充" not in f.name]
     if full:
         return full[-1]
@@ -138,8 +138,8 @@ class ReportTextAnalyzer(AbstractAnalyzer):
         if report_path is None:
             return AnalysisResult(
                 dimension=self.dimension, score=0, confidence=0.1,
-                signals=[], summary="未找到年报MD文件",
-                warnings=["请先运行 /fetch-stock <TICKER> reports 下载年报"],
+                signals=[], summary="未找到报告MD文件",
+                warnings=["请先运行 /fetch-stock <TICKER> reports 下载报告"],
             )
 
         try:
@@ -147,7 +147,7 @@ class ReportTextAnalyzer(AbstractAnalyzer):
         except Exception:
             return AnalysisResult(
                 dimension=self.dimension, score=0, confidence=0.1,
-                signals=[], summary="年报文件读取失败",
+                signals=[], summary="报告文件读取失败",
             )
 
         # 1. Audit opinion
@@ -165,7 +165,7 @@ class ReportTextAnalyzer(AbstractAnalyzer):
         if not signals:
             return AnalysisResult(
                 dimension=self.dimension, score=0, confidence=0.2,
-                signals=[], summary="年报文本未提取到有效信号",
+                signals=[], summary="报告文本未提取到有效信号",
             )
 
         bullish = sum(s.strength for s in signals if s.direction == "bullish")
@@ -185,7 +185,7 @@ class ReportTextAnalyzer(AbstractAnalyzer):
             score=round(score, 2),
             confidence=round(confidence, 2),
             signals=signals,
-            summary=f"年报文本分析{qual}，审计{'清洁' if audit_clean else '需关注'}",
+            summary=f"报告文本分析{qual}，审计{'清洁' if audit_clean else '需关注'}",
             details={"metrics": metrics, "report": str(report_path)},
             warnings=warnings,
         )
