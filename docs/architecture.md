@@ -77,6 +77,30 @@ DataGateway (`gateway.py`) 为 CLI 唯一入口，持有 8 个 Provider，内置
 
 详见：`docs/data-flow.md`（数据流与 Provider 详情）、`docs/data-structure.md`（存储目录结构）。
 
+#### RateLimiter (`src/data/rate_limiter.py`)
+
+每个 Provider 独立限速，配置驱动（`config/providers.yaml`），代码不写死任何具体参数。
+
+```
+limiter = RateLimiter.from_yaml("config/providers.yaml")
+for attempt in limiter.attempts("akshare"):   # 自动等待 + 退避
+    data = provider.fetch()
+    if data is not None:
+        attempt.success()                     # 成功 → 重置退避
+        break
+    attempt.failure()                         # 失败 → 退避下次
+```
+
+| 机制 | 说明 |
+|------|------|
+| 最小间隔 | `min_interval_ms` — 两次请求间强制等待 |
+| 退避策略 | `exponential` / `linear` / `fixed` — 失败后延迟倍增 |
+| 抖动 | `jitter_pct` — 随机化延迟避免惊群效应 |
+| 最大重试 | `max_retries` — 全部失败后返回 None |
+| 冷却期 | 连续失败超过阈值后进入冷却，避免对故障源持续请求 |
+
+Gateway `_try()` 封装此模式，ETF/股票/期货调用统一经过。Provider 内部的重试（如 ETF `get_daily`）是额外安全层。
+
 ### Analysis Layer (`src/analysis/`)
 
 每个模块继承 AbstractAnalyzer，输入 AnalysisContext，输出 AnalysisResult (score: -2~+2, confidence, signals, summary):
