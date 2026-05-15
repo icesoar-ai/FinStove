@@ -139,13 +139,13 @@ class CNINFOProvider:
                 if since_year is not None and year < since_year:
                     continue
 
-                dedup_key = (year, rtype)
+                is_summary = "摘要" in title
+                kind = "summary" if is_summary else "full"
+
+                dedup_key = (year, rtype, kind)
                 if dedup_key in seen:
                     continue
                 seen.add(dedup_key)
-
-                is_summary = "摘要" in title
-                kind = "summary" if is_summary else "full"
                 results.append({
                     "title": title,
                     "year": year,
