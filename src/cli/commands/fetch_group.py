@@ -10,6 +10,7 @@ from src.cli.commands.flow import flow_data
 from src.cli.commands.yield_curve import yield_curve_data
 from src.cli.commands.financials import financials
 from src.cli.commands.reports import reports
+from src.cli.commands.etf_data import etf_data
 
 
 @click.group(name="fetch")
@@ -27,3 +28,4 @@ fetch_group.add_command(flow_data)
 fetch_group.add_command(yield_curve_data)
 fetch_group.add_command(financials)
 fetch_group.add_command(reports)
+fetch_group.add_command(etf_data)
