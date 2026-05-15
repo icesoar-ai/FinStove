@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 文档 | 内容 |
 |------|------|
 | `docs/architecture.md` | 架构总览、分层设计、分析模块、估值方法、**全部已知限制与待完善项** |
-| `docs/capabilities.md` | CLI 命令参考 (fetch/live/分析共 24 个命令) |
+| `docs/capabilities.md` | Skills + CLI 命令完整参考 |
 | `docs/data-flow.md` | 数据流架构、8 个 Provider 详情与接口清单、各自的限制 |
 | `docs/data-structure.md` | Parquet 存储目录结构、命名规则、品种码表 |
 

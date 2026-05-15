@@ -74,6 +74,6 @@ Python 3.12+ / Click + Rich / AKShare + yfinance + CoinGecko + FRED + CNINFO / t
 | 文档 | 内容 |
 |------|------|
 | `docs/architecture.md` | 架构总览、模块设计、**全部已知限制** |
-| `docs/capabilities.md` | CLI 命令完整参考（含参数和选项） |
+| `docs/capabilities.md` | Skills + CLI 命令完整参考 |
 | `docs/data-flow.md` | 数据流架构、Provider 详情与限制 |
 | `docs/data-structure.md` | 存储目录结构、命名规则 |
