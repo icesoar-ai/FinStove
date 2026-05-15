@@ -10,7 +10,7 @@ def detect_market(ticker: str) -> Market:
     if ".SH" in ticker or ".SZ" in ticker:
         return Market.CN
     if re.match(r"^\d{6}$", ticker):
-        if ticker[0] in ("0", "3", "5", "6", "8", "9"):
+        if ticker[0] in ("0", "1", "3", "5", "6", "8", "9"):
             return Market.CN
     if ".T" in ticker:
         return Market.JP
