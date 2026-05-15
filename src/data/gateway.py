@@ -322,7 +322,7 @@ class DataGateway:
                     attempt.failure()
             logger.warning("CNINFO download_reports 全部重试失败: %s", last_err)
             return []
-        return self._edgar.download_10k(symbol)
+        return self._edgar.download_filings(symbol)
 
     # ── 宏观 ─────────────────────────────────────────
 

@@ -1,9 +1,8 @@
-"""SEC EDGAR provider — 美股年报 (10-K) 查询和下载.
+"""SEC EDGAR provider — 美股 filings (10-K/10-Q) 查询和下载.
 
 Uses SEC EDGAR public API, no registration required.
 CIK-to-ticker mapping from SEC company_tickers.json.
 """
-from datetime import date
 from pathlib import Path
 from typing import Optional
 import time
@@ -12,12 +11,16 @@ import requests
 
 
 class SECEDGARProvider:
-    """Provider for SEC EDGAR filings (10-K annual reports)."""
+    """Provider for SEC EDGAR filings (10-K annual, 10-Q quarterly)."""
 
     BASE = "https://data.sec.gov/submissions"
     ARCHIVE = "https://www.sec.gov/Archives/edgar/data"
     HEADERS = {"User-Agent": "stocks-analysis/1.0 (contact@example.com)"}
     TIMEOUT = 15
+    FORM_TYPE_MAP = {
+        "annual":    "10-K",
+        "quarterly": "10-Q",
+    }
 
     def __init__(self):
         self._cik_cache: dict[str, str] = {}
@@ -43,11 +46,19 @@ class SECEDGARProvider:
             pass
         return None
 
-    def list_10k(self, ticker: str) -> list[dict]:
-        """List recent 10-K (annual report) filings for a ticker.
+    def list_filings(self, ticker: str,
+                     form_types: Optional[list[str]] = None,
+                     since_year: Optional[int] = None) -> list[dict]:
+        """List SEC filings for a ticker.
 
-        Returns list of dicts with keys: form, filing_date, report_date, accession, url.
+        Args:
+            ticker: Stock ticker symbol
+            form_types: List of form types, e.g. ["10-K", "10-Q"]. Default to both.
+            since_year: Filter filings with report_date earlier than this year.
         """
+        if form_types is None:
+            form_types = ["10-K", "10-Q"]
+
         cik = self._get_cik(ticker)
         if not cik:
             return []
@@ -68,31 +79,45 @@ class SECEDGARProvider:
 
             results = []
             for i in range(len(forms)):
-                if forms[i] == "10-K":
-                    acc = accessions[i].replace("-", "")
-                    results.append({
-                        "form": forms[i],
-                        "filing_date": dates[i],
-                        "report_date": reports[i] or "",
-                        "accession": accessions[i],
-                        "description": descriptions[i] if i < len(descriptions) else "",
-                        "url": f"{self.ARCHIVE}/{cik.lstrip('0')}/{acc}/{docs[i]}",
-                    })
+                if forms[i] not in form_types:
+                    continue
+
+                report_date = reports[i] or ""
+                year = int(report_date[:4]) if report_date and len(report_date) >= 4 else 0
+                if since_year is not None and year < since_year:
+                    continue
+
+                acc = accessions[i].replace("-", "")
+                rtype = "annual" if forms[i] == "10-K" else "quarterly"
+
+                results.append({
+                    "form": forms[i],
+                    "report_type": rtype,
+                    "filing_date": dates[i],
+                    "report_date": report_date,
+                    "accession": accessions[i],
+                    "description": descriptions[i] if i < len(descriptions) else "",
+                    "url": f"{self.ARCHIVE}/{cik.lstrip('0')}/{acc}/{docs[i]}",
+                })
             return results
         except Exception:
             return []
 
-    def download_10k(self, ticker: str, data_dir: str = "data/stock") -> list[dict]:
-        """Download 10-K filing text for a ticker.
+    def download_filings(self, ticker: str, data_dir: str = "data/stock",
+                         since_year: Optional[int] = None,
+                         form_types: Optional[list[str]] = None) -> list[dict]:
+        """Download SEC filings (10-K and/or 10-Q) for a ticker.
 
-        Saves to data_dir/{market}/{symbol}/reports/{filename}.txt
+        Saves to data_dir/us/{ticker}/reports/{filename}.txt
         """
-        results = self.list_10k(ticker)
+        results = self.list_filings(ticker, form_types=form_types, since_year=since_year)
         ticker_dir = Path(data_dir) / "us" / ticker / "reports"
         ticker_dir.mkdir(parents=True, exist_ok=True)
 
         for r in results:
-            filename = f"{r['report_date'][:4]}_10K_{ticker}.txt"
+            form = r["form"]
+            year = r["report_date"][:4] if r["report_date"] else "unknown"
+            filename = f"{year}_{form}_{ticker}.txt"
             dest = ticker_dir / filename
             if dest.exists() and dest.stat().st_size > 0:
                 r["downloaded"] = True
@@ -102,10 +127,10 @@ class SECEDGARProvider:
             try:
                 resp = requests.get(r["url"], headers=self.HEADERS, timeout=60, stream=True)
                 resp.raise_for_status()
-                dest.write_text(resp.text[:500000], encoding="utf-8")  # Cap at 500KB
+                dest.write_text(resp.text[:500000], encoding="utf-8")
                 r["downloaded"] = True
                 r["path"] = str(dest)
-                time.sleep(0.2)  # SEC rate limit: 10 req/sec
+                time.sleep(0.2)
             except Exception:
                 r["downloaded"] = False
 
