@@ -22,12 +22,12 @@ class ETFProvider:
         """
         if market == "cn":
             import akshare as ak
-            df = ak.fund_etf_hist_em(fund=code)
+            df = ak.fund_etf_hist_em(symbol=code)
             if df is not None and not df.empty:
                 df = df.rename(columns={
-                    "净值日期": "date", "开盘价": "open",
-                    "最高价": "high", "最低价": "low",
-                    "收盘价": "close", "成交量": "volume",
+                    "日期": "date", "开盘": "open",
+                    "最高": "high", "最低": "low",
+                    "收盘": "close", "成交量": "volume",
                 })
         else:
             import yfinance as yf
