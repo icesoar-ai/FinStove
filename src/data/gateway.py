@@ -45,7 +45,7 @@ class DataGateway:
     _RATE_KEY: dict[str, str] = {
         "_ak": "akshare", "_yf": "yfinance", "_bs": "baostock",
         "_fred": "fred", "_cninfo": "cninfo", "_cg": "coingecko",
-        "_news": "news_cn",
+        "_etf": "akshare", "_news": "news_cn",
     }
 
     def __init__(self, cache: Optional[DataCache] = None, storage: Optional[ParquetStorage] = None):
@@ -353,10 +353,13 @@ class DataGateway:
     # ── ETF ─────────────────────────────────────────
 
     def get_etf_daily(self, code: str, market: Market) -> pd.DataFrame:
-        """ETF 日线 OHLCV."""
+        """ETF 日线 OHLCV. CN ETF via AKShare with rate limiting."""
         mkt = market.value
         dir_name = market_dir(market, code)
-        df = self._etf.get_daily(code, mkt)
+        if mkt == "cn":
+            df = self._try("_etf", self._etf.get_daily, code, mkt)
+        else:
+            df = self._etf.get_daily(code, mkt)
         if df is not None and not df.empty:
             self._storage.merge_and_save(df, "etf", mkt, dir_name, "daily")
         return df if df is not None else pd.DataFrame()
