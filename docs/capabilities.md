@@ -70,6 +70,7 @@ python -m src.cli.main fetch yield-curve [--history]
 | `fetch crypto [SYMBOL]` | BTC/ETH/SOL 等 | YFinance 优先，降级 CoinGecko |
 | `fetch financials <TICKER>` | A股/港股/美股 | 三张表 + 财务指标 + 分红记录。`--period all|annual|quarterly` 筛选周期 |
 | `fetch reports <TICKER>` | A股/美股 | A股: CNINFO 年报/半年报/季报 PDF+MD；美股: SEC EDGAR 10-K/10-Q 文本。港股暂不支持。`--type all|annual|semi_annual|quarterly`, `--years` 默认近2年 |
+| `fetch etf <TICKER>` | A股/美股 | ETF 日线 + 净值 + 持仓 (A股) |
 | `fetch flow` | 沪深港通 | 北向 (外资→A股) + 南向 (内资→港股) |
 | `fetch yield-curve` | 美债 | 3M/1Y/2Y/5Y/10Y/30Y，需 `FRED_API_KEY` |
 
