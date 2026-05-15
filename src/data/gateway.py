@@ -33,6 +33,7 @@ from .providers.cninfo import CNINFOProvider
 from .providers.coingecko import CoinGeckoProvider
 from .providers.news import NewsProvider
 from .providers.edgar import SECEDGARProvider
+from .providers.etf import ETFProvider
 
 from src.utils.ticker import stock_dir, market_dir
 
@@ -59,6 +60,7 @@ class DataGateway:
         self._edgar = SECEDGARProvider()
         self._cg = CoinGeckoProvider(cache=self._cache)
         self._news = NewsProvider(cache=self._cache)
+        self._etf = ETFProvider()
 
     # ── 内部工具 ─────────────────────────────────────────────
 
@@ -351,6 +353,35 @@ class DataGateway:
         return self._edgar.download_filings(
             symbol, since_year=since_year, form_types=form_types
         )
+
+    # ── ETF ─────────────────────────────────────────
+
+    def get_etf_daily(self, code: str, market: Market) -> pd.DataFrame:
+        """ETF 日线 OHLCV."""
+        mkt = market.value
+        dir_name = market_dir(market, code)
+        df = self._etf.get_daily(code, mkt)
+        if df is not None and not df.empty:
+            self._storage.merge_and_save(df, "etf", mkt, dir_name, "daily")
+        return df if df is not None else pd.DataFrame()
+
+    def get_etf_nav(self, code: str, market: Market) -> pd.DataFrame:
+        """ETF 净值历史."""
+        mkt = market.value
+        df = self._etf.get_nav(code, mkt)
+        if df is not None and not df.empty:
+            dir_name = market_dir(market, code)
+            self._storage.merge_and_save(df, "etf", mkt, dir_name, "nav")
+        return df if df is not None else pd.DataFrame()
+
+    def get_etf_holdings(self, code: str, market: Market) -> pd.DataFrame:
+        """ETF 持仓."""
+        mkt = market.value
+        df = self._etf.get_holdings(code, mkt)
+        if df is not None and not df.empty:
+            dir_name = market_dir(market, code)
+            self._storage.merge_and_save(df, "etf", mkt, dir_name, "holdings")
+        return df if df is not None else pd.DataFrame()
 
     # ── 宏观 ─────────────────────────────────────────
 
