@@ -57,7 +57,7 @@ class DataGateway:
         self._bs = BaostockProvider(cache=self._cache, storage=self._storage)
         self._fred = FREDProvider(cache=self._cache, storage=self._storage)
         self._cninfo = CNINFOProvider(storage=self._storage)
-        self._edgar = SECEDGARProvider(data_dir=str(self._storage.base))
+        self._edgar = SECEDGARProvider(data_dir=str(self._storage.base / "stock"))
         self._cg = CoinGeckoProvider(cache=self._cache)
         self._news = NewsProvider(cache=self._cache)
         self._etf = ETFProvider()
