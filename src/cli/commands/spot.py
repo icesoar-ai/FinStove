@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from src.data.base import Market
 from src.data.gateway import DataGateway
 from src.utils.ticker import detect_market, parse_ticker
 
@@ -256,22 +257,49 @@ def _ticker_detail(gw: DataGateway, ticker: str):
             console.print(f"[red]CoinGecko 获取失败: {e}[/red]")
             return
 
-    # CN stock
-    if market == "CN":
+    # CN stock (AKShare spot first, fallback to yfinance)
+    if market == Market.CN:
         try:
             df = gw.get_a_share_spot()
             row = df[df["代码"] == symbol]
-            if row.empty:
-                console.print(f"[yellow]未找到 {symbol}[/yellow]")
+            if not row.empty:
+                _show_detail_row(row.iloc[0])
                 return
-            _show_detail_row(row.iloc[0])
-            return
-        except Exception as e:
-            console.print(f"[red]A股行情获取失败: {e}[/red]")
-            return
+        except Exception:
+            pass
+        # Fallback: yfinance fast_info
+        try:
+            import yfinance as yf
+            t = yf.Ticker(f"{symbol}.SS")
+            fi = t.fast_info
+            price = fi.get("lastPrice") or fi.get("regularMarketPrice")
+            prev = fi.get("regularMarketPreviousClose") or fi.get("previousClose")
+            if not price:
+                t = yf.Ticker(f"{symbol}.SZ")
+                fi = t.fast_info
+                price = fi.get("lastPrice") or fi.get("regularMarketPrice")
+                prev = fi.get("regularMarketPreviousClose") or fi.get("previousClose")
+            if price:
+                chg_pct = ((price - prev) / prev * 100) if price and prev else None
+                color = _chg_color(chg_pct or 0)
+                console.print(Panel.fit(
+                    f"{symbol}  {_fmt_price(price)}  {_fmt_chg(chg_pct)}",
+                    title=symbol, border_style=color))
+                dt = Table(show_header=False, box=None)
+                dt.add_column("field", style="dim"); dt.add_column("value", justify="right")
+                dt.add_row("今开", _fmt_price(fi.get("open")))
+                dt.add_row("最高", _fmt_price(fi.get("dayHigh")))
+                dt.add_row("最低", _fmt_price(fi.get("dayLow")))
+                dt.add_row("昨收", _fmt_price(prev))
+                dt.add_row("市值", _fmt_price(fi.get("marketCap")))
+                console.print(dt)
+                return
+        except Exception:
+            pass
+        console.print(f"[red]A股行情获取失败: {symbol}[/red]")
 
     # HK stock
-    if market == "HK":
+    if market == Market.HK:
         try:
             df = gw.get_hk_stock_spot()
             row = df[df["代码"] == symbol]
@@ -287,7 +315,7 @@ def _ticker_detail(gw: DataGateway, ticker: str):
             return
 
     # US stock
-    if market == "US":
+    if market == Market.US:
         try:
             df = gw.get_us_stock_spot()
             row = df[df["代码"] == symbol.upper()]
@@ -398,7 +426,7 @@ def _watchlist(gw: DataGateway, path: str):
     for raw in lines:
         symbol, market = parse_ticker(raw)
 
-        if market == "CN":
+        if market == Market.CN:
             if cn_df is None:
                 try:
                     cn_df = gw.get_a_share_spot()
@@ -413,7 +441,7 @@ def _watchlist(gw: DataGateway, path: str):
                                  str(r.get("涨跌额", "")))
                 continue
 
-        elif market == "HK":
+        elif market == Market.HK:
             if hk_df is None:
                 try:
                     hk_df = gw.get_hk_stock_spot()
