@@ -116,7 +116,13 @@ class AKShareProvider:
         }
         sym = index_map.get(symbol, f"sh{symbol}" if symbol.startswith(("0", "6")) else f"sz{symbol}")
 
-        df = self._cached("get_index", 86400, self._ak.stock_zh_index_daily_em, sym, start, end)
+        df = self._cached("get_index", 86400, self._ak.stock_zh_index_daily, sym)
+        if not df.empty and "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"])
+            lo = pd.to_datetime(start, format="%Y%m%d")
+            hi = pd.to_datetime(end, format="%Y%m%d")
+            df = df[df["date"] >= lo]
+            df = df[df["date"] <= hi]
         return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Northbound / Southbound Flow ----
