@@ -168,17 +168,19 @@ class DataGateway:
         dir_name = stock_dir(symbol)
 
         if market == Market.CN:
-            # AKShare uses YYYYMMDD
+            # AKShare / Baostock use YYYYMMDD; strip dashes from CLI-supplied dates
+            ak_start = start.replace("-", "")
+            ak_end = end.replace("-", "")
             if force:
                 df = self._fetch_and_save(
                     "stock", "cn", dir_name, "daily",
-                    "_ak", self._ak.get_daily, symbol, start=start, end=end,
+                    "_ak", self._ak.get_daily, symbol, start=ak_start, end=ak_end,
                 )
             else:
                 df = self._read_or_fetch(
                     "stock", "cn", dir_name, "daily",
                     "akshare", self._ak.get_daily, symbol,
-                    start_date=start, end_date=end,
+                    start_date=ak_start, end_date=ak_end,
                 )
             # Fallback chain: AKShare → yfinance → Baostock
             if df is None or df.empty:
@@ -190,7 +192,7 @@ class DataGateway:
             if df is None or df.empty:
                 df = self._fetch_and_save(
                     "stock", "cn", dir_name, "daily",
-                    "_bs", self._bs.get_daily, symbol, start=start, end=end,
+                    "_bs", self._bs.get_daily, symbol, start=ak_start, end=ak_end,
                 )
         else:
             if force:
