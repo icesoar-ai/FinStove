@@ -24,15 +24,14 @@ BENCHMARK_MAP = {
     Market.FR: ("fr", "CAC", "CAC 40"),
 }
 
-def _get_benchmark_return(mkt: Market) -> float | None:
+def _get_benchmark_return(gw: DataGateway, mkt: Market) -> float | None:
     """Get 1-year benchmark index return from Parquet storage."""
     bench = BENCHMARK_MAP.get(mkt)
     if not bench:
         return None
     mkt_str, code, _ = bench
-    storage = ParquetStorage()
     try:
-        df = storage.load("index", mkt_str, code, "daily")
+        df = gw.read("index", mkt_str, code, "daily")
         if df is not None and not df.empty and "close" in df.columns:
             close = df["close"].astype(float)
             if len(close) >= 252:
@@ -82,7 +81,7 @@ def benchmark(ticker: str, start: str, end: str, market: str):
         return
 
     # Get benchmark return
-    bench_return = _get_benchmark_return(mkt)
+    bench_return = _get_benchmark_return(gw, mkt)
 
     # Get macro data for risk-free rate
     macro_data = DataGateway().get_macro()

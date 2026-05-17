@@ -88,6 +88,10 @@ class DataGateway:
                 attempt.failure()
         return None
 
+    def read(self, asset: str, mkt: str, sym: str, dtype: str) -> pd.DataFrame:
+        """只读 Parquet 存储，不触发抓取。所有只读路径统一入口。"""
+        return self._storage.load(asset, mkt, sym, dtype)
+
     def _read_or_fetch(
         self, asset: str, mkt: str, sym: str, dtype: str,
         rkey: str, provider_fn, *args,

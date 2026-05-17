@@ -5,13 +5,19 @@ from rich.panel import Panel
 from rich.table import Table
 from datetime import date, timedelta
 
-from src.data.storage import ParquetStorage
 from src.data.gateway import DataGateway
 
 console = Console()
 
 # Scan targets: (asset_type, market, symbol, label, group)
 SCAN_TARGETS = [
+    # A股 indices
+    ("index", "cn", "000001", "上证指数", "A股"),
+    ("index", "cn", "399001", "深证成指", "A股"),
+    ("index", "cn", "000300", "沪深300", "A股"),
+    ("index", "cn", "399006", "创业板指", "A股"),
+    ("index", "cn", "000688", "科创50", "A股"),
+    ("index", "cn", "000016", "上证50", "A股"),
     # Global indices
     ("index", "us", "SPX", "S&P 500", "美股"),
     ("index", "us", "NDX", "Nasdaq", "美股"),
@@ -40,11 +46,10 @@ SCAN_TARGETS = [
 ]
 
 
-def _get_performance(asset_type: str, market: str, symbol: str) -> dict | None:
+def _get_performance(gw: DataGateway, asset_type: str, market: str, symbol: str) -> dict | None:
     """Read latest prices and compute returns."""
-    storage = ParquetStorage()
     try:
-        df = storage.load(asset_type, market, symbol, "daily")
+        df = gw.read(asset_type, market, symbol, "daily")
         if df is None or df.empty or "close" not in df.columns:
             return None
 
@@ -76,7 +81,7 @@ def _get_performance(asset_type: str, market: str, symbol: str) -> dict | None:
 
 
 @click.command()
-@click.option("--group", default=None, help="分组过滤: 美股/港股/亚太/欧洲/商品/外汇/加密货币")
+@click.option("--group", default=None, help="分组过滤: A股/美股/港股/亚太/欧洲/商品/外汇/加密货币")
 def market_scan(group: str = None):
     """多市场概览扫描 — 各资产类别近期表现和趋势.
 
@@ -85,11 +90,12 @@ def market_scan(group: str = None):
     console.print("[bold blue]Market Scan: 多市场概览[/bold blue]")
     console.print(f"[dim]数据截止: {date.today()}[/dim]\n")
 
+    gw = DataGateway()
     groups: dict[str, list] = {}
     for asset_type, market, symbol, label, grp in SCAN_TARGETS:
         if group and grp != group:
             continue
-        perf = _get_performance(asset_type, market, symbol)
+        perf = _get_performance(gw, asset_type, market, symbol)
         if perf:
             groups.setdefault(grp, []).append((label, perf))
 
@@ -138,24 +144,4 @@ def market_scan(group: str = None):
         console.print(table)
         console.print()
 
-    # CN indices summary (from AKShare if available)
-    console.print("[bold]A股指数[/bold]")
-    cn_indexes = [
-        ("000001", "上证指数"), ("399001", "深证成指"), ("000300", "沪深300"),
-        ("399006", "创业板指"), ("000688", "科创50"), ("000016", "上证50"),
-    ]
-    gw = DataGateway()
-    from src.data.base import Market
-    for code, name in cn_indexes:
-        df = gw.get_index(Market.CN, code)
-        if df is not None and not df.empty and "close" in df.columns:
-            close = df["close"].astype(float)
-            latest = float(close.iloc[-1])
-            chg_pct = close.pct_change().iloc[-1] * 100 if len(close) >= 2 else 0
-            chg_c = "green" if chg_pct > 0 else "red"
-            trend = "↑" if len(close) >= 50 and close.iloc[-1] > close.tail(50).mean() else "↓"
-            console.print(f"  {name:8s}  {latest:>10,.1f}  [{chg_c}]{chg_pct:+.1f}%[/{chg_c}]  [{trend}]")
-        else:
-            console.print(f"  [dim]{name:8s}  无数据[/dim]")
-
-    console.print("\n[dim]提示: 数据来自已拉取的 Parquet 文件，先运行 /fetch-all 更新。[/dim]")
+    console.print("[dim]提示: 数据来自已拉取的 Parquet 文件，先运行 /fetch-all 更新。[/dim]")

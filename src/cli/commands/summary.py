@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -92,11 +92,11 @@ elif TODAY.weekday() == 6:  # Sunday → use Friday
     _REFERENCE_DATE = TODAY - timedelta(days=2)
 
 
-def _read_latest(storage: ParquetStorage, asset_type: str, market: str,
+def _read_latest(gw: DataGateway, asset_type: str, market: str,
                  symbol: str, data_type: str) -> dict | None:
     """Read latest row from a Parquet dataset. Returns None if missing."""
     try:
-        df = storage.load(asset_type, market, symbol, data_type)
+        df = gw.read(asset_type, market, symbol, data_type)
         if df is None or df.empty:
             return None
 
@@ -175,7 +175,7 @@ def daily_summary(alert: bool):
 
     只读不抓取，涵盖指数/商品/外汇/加密货币/美债。
     """
-    storage = ParquetStorage()
+    gw = DataGateway()
     groups = [
         ("全球指数", INDEX_SETS, {"is_forex": False, "is_pct": False, "is_flow": False}),
         ("大宗商品", COMMODITY_SETS, {"is_forex": False, "is_pct": False, "is_flow": False}),
@@ -210,7 +210,7 @@ def daily_summary(alert: bool):
                 asset_type, market, symbol, data_type, label, _ = entry
             else:
                 asset_type, market, symbol, data_type, label = entry
-            info = _read_latest(storage, asset_type, market, symbol, data_type)
+            info = _read_latest(gw, asset_type, market, symbol, data_type)
             if info is None or info["value"] is None:
                 miss += 1
                 rows.append((label, "[red]缺数据[/red]", "[dim]--[/dim]", "[dim]--[/dim]", "dim"))

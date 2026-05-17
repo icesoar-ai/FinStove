@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.data.storage import ParquetStorage
+from src.data.gateway import DataGateway
 from src.data.base import Market
 from src.utils.ticker import parse_ticker, stock_dir
 from src.analysis.fundamental.aggregator import ValuationAggregator
@@ -139,7 +139,7 @@ def valuation(ticker: str, format: str):
         return
 
     dir_name = stock_dir(symbol)
-    storage = ParquetStorage()
+    gw = DataGateway()
 
     console.print(f"[bold blue]Valuation: {dir_name}[/bold blue]")
 
@@ -147,7 +147,7 @@ def valuation(ticker: str, format: str):
     # formatted strings like '250.22亿' that methods can't parse.)
     financials = {}
     for dtype in ["balance_sheet", "income", "cashflow"]:
-        df = storage.load("stock", "cn", dir_name, dtype)
+        df = gw.read("stock", "cn", dir_name, dtype)
         if not df.empty:
             df = _normalize_summary(df)
             # Drop columns that are entirely NaN after normalization
@@ -155,14 +155,14 @@ def valuation(ticker: str, format: str):
             df = df.dropna(axis=1, how="all")
             financials[dtype] = df
 
-    summary = storage.load("stock", "cn", dir_name, "financials")
+    summary = gw.read("stock", "cn", dir_name, "financials")
     if not summary.empty:
         summary = _normalize_summary(summary)
         summary = _augment_summary(summary)
         financials["summary"] = summary
 
     # Load dividend history
-    dividends = storage.load("stock", "cn", dir_name, "dividends")
+    dividends = gw.read("stock", "cn", dir_name, "dividends")
     if not dividends.empty:
         financials["dividends"] = dividends
 
@@ -214,7 +214,7 @@ def valuation(ticker: str, format: str):
         console.print("[dim]缺少现金流量表，FCFF/FCFE/FCF质量方法将跳过[/dim]")
 
     # Load price data
-    market_data = storage.load("stock", "cn", dir_name, "daily")
+    market_data = gw.read("stock", "cn", dir_name, "daily")
     if market_data.empty:
         console.print("[dim]无日线数据，相对估值缺少当前价格参考[/dim]")
 
