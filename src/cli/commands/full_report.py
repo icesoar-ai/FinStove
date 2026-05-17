@@ -72,10 +72,15 @@ def full_report(ticker: str, context: str, format: str):
         console.print(f"[dim]{len(news_data)} news items loaded[/dim]")
     except Exception:
         pass
+    try:
+        flow_data = gw.get_flow()
+    except Exception:
+        flow_data = None
 
     tk = TickerModel(raw=ticker, market=market, symbol=symbol)
     ctx = AnalysisContext(ticker=tk, price_data=df, macro_data=macro_data,
-                          financials=financials, news_data=news_data)
+                          financials=financials, news_data=news_data,
+                          flow_data=flow_data)
 
     # Run all analyzers
     analyzers = [

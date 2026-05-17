@@ -24,7 +24,7 @@ class AnalysisContext:
     price_data: Optional[pd.DataFrame] = None
     financials: Optional[dict] = None
     macro_data: Optional[dict] = None
-    flow_data: Optional[pd.DataFrame] = None
+    flow_data: Optional[dict[str, pd.DataFrame]] = None
     news_data: Optional[list[NewsItem]] = None
     lookback_days: int = 250
 

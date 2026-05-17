@@ -131,14 +131,26 @@ class AKShareProvider:
         if end is None:
             end = date.today().strftime("%Y%m%d")
         df = self._cached("northbound", 86400, self._ak.stock_hsgt_hist_em, "北向资金")
-        return df if df is not None and not df.empty else pd.DataFrame()
+        if df is None or df.empty:
+            return pd.DataFrame()
+        df = df.copy()
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        lo = pd.Timestamp(start).date()
+        hi = pd.Timestamp(end).date()
+        return df[(df["date"] >= lo) & (df["date"] <= hi)]
 
     def get_southbound(self, start: str = "20100101", end: Optional[str] = None) -> pd.DataFrame:
         """Fetch southbound net flow (沪深港通南向资金), pure fetch."""
         if end is None:
             end = date.today().strftime("%Y%m%d")
         df = self._cached("southbound", 86400, self._ak.stock_hsgt_hist_em, "南向资金")
-        return df if df is not None and not df.empty else pd.DataFrame()
+        if df is None or df.empty:
+            return pd.DataFrame()
+        df = df.copy()
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        lo = pd.Timestamp(start).date()
+        hi = pd.Timestamp(end).date()
+        return df[(df["date"] >= lo) & (df["date"] <= hi)]
 
     # ---- Shibor ----
 

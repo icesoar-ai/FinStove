@@ -38,22 +38,28 @@ class CapitalFlowAnalyzer(AbstractAnalyzer):
 
     def _north_south_flow(self, flow_data) -> list[Signal]:
         signals = []
-        if flow_data is None or flow_data.empty:
+        if flow_data is None:
             return signals
 
-        # Check for net flow direction using recent data
-        for direction, label, bull_label, bear_label in [
+        for key, label, bull_label, bear_label in [
             ("northbound", "北向资金", "持续净流入A股", "持续净流出A股"),
             ("southbound", "南向资金", "资金回流港股", "资金流入港股"),
         ]:
-            cols = [c for c in flow_data.columns if direction in str(c).lower() or "net" in str(c).lower()]
-            if cols:
-                recent = flow_data[cols[0]].tail(20)
-                net_sum = recent.sum()
-                if net_sum > 0:
-                    signals.append(Signal(label, "bullish", 0.5, f"{bull_label}，20日累计 {net_sum:.0f}亿"))
-                else:
-                    signals.append(Signal(label, "bearish", 0.5, f"{bear_label}，20日累计 {net_sum:.0f}亿"))
+            df = flow_data.get(key) if isinstance(flow_data, dict) else flow_data
+            if df is None or df.empty:
+                continue
+            col = "当日成交净买额" if "当日成交净买额" in df.columns else None
+            if col is None:
+                continue
+            recent = df[col].tail(20)
+            recent = recent.dropna()
+            if recent.empty:
+                continue
+            net_sum = recent.sum()
+            if net_sum > 0:
+                signals.append(Signal(label, "bullish", 0.5, f"{bull_label}，20日累计 {net_sum:.0f}亿"))
+            else:
+                signals.append(Signal(label, "bearish", 0.5, f"{bear_label}，20日累计 {net_sum:.0f}亿"))
         return signals
 
     def _volume_trend(self, price_data, lookback) -> list[Signal]:

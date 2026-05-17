@@ -108,7 +108,9 @@ def _read_latest(storage: ParquetStorage, asset_type: str, market: str,
             val = float(row["value"])
         elif "当日成交净买额" in df.columns:
             raw = row["当日成交净买额"]
-            val = float(raw) if pd.notna(raw) else 0.0
+            if pd.isna(raw):
+                return None
+            val = float(raw)
 
         dt = None
         if "date" in df.columns:
@@ -127,7 +129,10 @@ def _read_latest(storage: ParquetStorage, asset_type: str, market: str,
                 prev_val = float(prev_row["value"])
             elif "当日成交净买额" in df.columns:
                 raw = prev_row["当日成交净买额"]
-                prev_val = float(raw) if pd.notna(raw) else 0.0
+                if pd.isna(raw):
+                    prev_val = None
+                else:
+                    prev_val = float(raw)
 
         return {
             "date": dt,
