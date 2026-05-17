@@ -29,57 +29,6 @@ def parse_ticker(raw: str) -> tuple[str, Market]:
     return symbol, market
 
 
-import json
-from pathlib import Path
-
-_NAME_CACHE_FILE = Path.cwd() / "data" / "stock_names.json"
-
-
-def _load_name_cache() -> dict:
-    if _NAME_CACHE_FILE.exists():
-        try:
-            return json.loads(_NAME_CACHE_FILE.read_text())
-        except Exception:
-            pass
-    return {}
-
-
-def _save_name_cache(cache: dict) -> None:
-    _NAME_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _NAME_CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=False, indent=2))
-
-
-def get_stock_name(symbol: str) -> str:
-    """Get stock short name, e.g. '600388' -> '龙净环保'. Cached to disk after first fetch."""
-    cache = _load_name_cache()
-    if symbol in cache and cache[symbol]:
-        return cache[symbol]
-
-    try:
-        import akshare as ak
-        info = ak.stock_individual_info_em(symbol=symbol)
-        d = dict(zip(info["item"], info["value"]))
-        name = d.get("股票简称", "")
-        if name:
-            cache[symbol] = name
-            _save_name_cache(cache)
-        return name
-    except Exception:
-        # Try CNINFO profile as fallback
-        try:
-            import akshare as ak
-            profile = ak.stock_profile_cninfo(symbol=symbol)
-            if hasattr(profile, 'columns') and 'A股简称' in profile.columns:
-                name = str(profile['A股简称'].iloc[0])
-                if name:
-                    cache[symbol] = name
-                    _save_name_cache(cache)
-                return name
-        except Exception:
-            pass
-        return ""
-
-
 def stock_dir(code: str) -> str:
     """Return storage directory name: {code}.{suffix}.
 

@@ -10,6 +10,7 @@ CLI 命令只调 DataGateway，不感知 Provider 细节。
 """
 from __future__ import annotations
 
+import json
 import logging
 from datetime import date, timedelta
 from pathlib import Path
@@ -91,6 +92,116 @@ class DataGateway:
     def read(self, asset: str, mkt: str, sym: str, dtype: str) -> pd.DataFrame:
         """只读 Parquet 存储，不触发抓取。所有只读路径统一入口。"""
         return self._storage.load(asset, mkt, sym, dtype)
+
+    # ── Name resolution ─────────────────────────────────────
+
+    _NAME_CACHE_FILE = Path("data") / "stock_names.json"
+    _name_cache: dict[str, str] | None = None
+    _etf_name_map: dict[str, str] | None = None
+
+    def _load_name_cache(self) -> dict[str, str]:
+        if self._name_cache is not None:
+            return self._name_cache
+        if self._NAME_CACHE_FILE.exists():
+            try:
+                self._name_cache = json.loads(self._NAME_CACHE_FILE.read_text())
+            except Exception:
+                self._name_cache = {}
+        else:
+            self._name_cache = {}
+        return self._name_cache
+
+    def _save_name_cache(self, cache: dict[str, str]) -> None:
+        self._NAME_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        self._NAME_CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=False, indent=2))
+        self._name_cache = cache
+
+    def _load_etf_name_map(self) -> dict[str, str]:
+        if self._etf_name_map is not None:
+            return self._etf_name_map
+        try:
+            df = self._ak._ak.fund_etf_spot_em()
+            self._etf_name_map = dict(zip(df["代码"].astype(str), df["名称"]))
+        except Exception:
+            self._etf_name_map = {}
+        return self._etf_name_map
+
+    def name(self, asset: str, market: str, code: str, refresh: bool = False) -> str:
+        """查询资产可读名称，缓存到 data/stock_names.json.
+
+        Returns empty string if not found.
+        """
+        cache = self._load_name_cache()
+
+        # ── Stock CN ──
+        if asset == "stock" and market == "cn":
+            symbol = code.split(".")[0] if "." in code else code
+            if refresh:
+                cache.pop(symbol, None)
+                self._save_name_cache(cache)
+            if symbol in cache and cache[symbol]:
+                return cache[symbol]
+            try:
+                info = self._ak._ak.stock_individual_info_em(symbol=symbol)
+                d = dict(zip(info["item"], info["value"]))
+                name = d.get("股票简称", "")
+                if not name:
+                    profile = self._ak._ak.stock_profile_cninfo(symbol=symbol)
+                    if hasattr(profile, "columns") and "A股简称" in profile.columns:
+                        name = str(profile["A股简称"].iloc[0])
+                if name:
+                    cache[symbol] = name
+                    self._save_name_cache(cache)
+                return name
+            except Exception:
+                return ""
+
+        # ── Stock US / HK ──
+        if asset == "stock" and market in ("us", "hk"):
+            ticker = code.split(".")[0] if market == "us" and "." in code else code
+            cache_key = f"${ticker}"
+            if not refresh and cache_key in cache and cache[cache_key]:
+                return cache[cache_key]
+            try:
+                info = self._yf._yf.Ticker(ticker).info
+                name = info.get("longName") or info.get("shortName") or ""
+                if name:
+                    cache[cache_key] = name
+                    self._save_name_cache(cache)
+                return name
+            except Exception:
+                return ""
+
+        # ── ETF CN ──
+        if asset == "etf" and market == "cn":
+            symbol = code.split(".")[0] if "." in code else code
+            cache_key = f"etf:{code}"
+            if not refresh and cache_key in cache and cache[cache_key]:
+                return cache[cache_key]
+            names = self._load_etf_name_map()
+            name = names.get(symbol, "")
+            if name:
+                cache[cache_key] = name
+                self._save_name_cache(cache)
+            return name
+
+        # ── ETF US ──
+        if asset == "etf" and market == "us":
+            etf_ticker = code.split(".")[0] if "." in code else code
+            cache_key = f"etf:{code}"
+            if not refresh and cache_key in cache and cache[cache_key]:
+                return cache[cache_key]
+            try:
+                info = self._yf._yf.Ticker(etf_ticker).info
+                name = info.get("longName") or info.get("shortName") or ""
+                if name:
+                    cache[cache_key] = name
+                    self._save_name_cache(cache)
+                return name
+            except Exception:
+                return ""
+
+        return ""
 
     def _read_or_fetch(
         self, asset: str, mkt: str, sym: str, dtype: str,

@@ -6,7 +6,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from src.utils.ticker import get_stock_name, _load_name_cache, _save_name_cache
+from src.data.gateway import DataGateway
 
 console = Console()
 
@@ -66,57 +66,13 @@ FLOW_NAMES = {
 }
 
 
-_ETF_NAME_MAP: dict[str, str] | None = None
-
-
-def _load_etf_name_map() -> dict[str, str]:
-    """Load all CN ETF names from AKShare (cached per session)."""
-    global _ETF_NAME_MAP
-    if _ETF_NAME_MAP is not None:
-        return _ETF_NAME_MAP
-    try:
-        import akshare as ak
-        df = ak.fund_etf_spot_em()
-        _ETF_NAME_MAP = dict(zip(df["代码"].astype(str), df["名称"]))
-    except Exception:
-        _ETF_NAME_MAP = {}
-    return _ETF_NAME_MAP
-
-
-def _resolve_name(asset_type: str, market: str, code: str, refresh: bool) -> Optional[str]:
+def _resolve_name(gw: DataGateway, asset_type: str, market: str, code: str, refresh: bool) -> Optional[str]:
     """Resolve a human-readable name for an asset directory."""
-    # ── Stock CN ──
-    if asset_type == "stock" and market == "cn":
-        symbol = code.split(".")[0] if "." in code else code
-        if refresh:
-            cache = _load_name_cache()
-            if symbol in cache:
-                del cache[symbol]
-                _save_name_cache(cache)
-        return get_stock_name(symbol) or None
 
-    # ── Stock US / HK ──
-    if asset_type == "stock" and market in ("us", "hk"):
-        # US: AAPL.US → AAPL; HK: 2015.HK → 2015.HK (yfinance uses .HK suffix)
-        if market == "us":
-            ticker = code.split(".")[0] if "." in code else code
-        else:
-            ticker = code
-        cache = _load_name_cache()
-        cache_key = f"${ticker}"
-        if not refresh and cache_key in cache and cache[cache_key]:
-            return cache[cache_key]
-        try:
-            import yfinance as yf
-            info = yf.Ticker(ticker).info
-            name = info.get("longName") or info.get("shortName") or ""
-            if name:
-                cache[cache_key] = name
-                _save_name_cache(cache)
-                return name
-        except Exception:
-            pass
-        return None
+    # ── Dynamic name lookup via Gateway ──
+    if asset_type in ("stock", "etf"):
+        name = gw.name(asset_type, market, code, refresh=refresh)
+        return name or None
 
     # ── Index CN ──
     if asset_type == "index" and market == "cn":
@@ -137,36 +93,6 @@ def _resolve_name(asset_type: str, market: str, code: str, refresh: bool) -> Opt
     # ── Crypto ──
     if asset_type == "crypto":
         return CRYPTO_NAMES.get(code)
-
-    # ── ETF ──
-    if asset_type == "etf":
-        symbol = code.split(".")[0] if "." in code else code
-        cache = _load_name_cache()
-        cache_key = f"etf:{code}"
-        if not refresh and cache_key in cache and cache[cache_key]:
-            return cache[cache_key]
-        if market == "cn":
-            names = _load_etf_name_map()
-            name = names.get(symbol)
-            if name:
-                cache[cache_key] = name
-                _save_name_cache(cache)
-                return name
-        else:
-            try:
-                import yfinance as yf
-                # ETF US: SPY.US → SPY
-                etf_ticker = code.split(".")[0] if "." in code else code
-                info = yf.Ticker(etf_ticker).info
-                name = info.get("longName") or info.get("shortName") or ""
-                if name:
-                    cache[cache_key] = name
-                    _save_name_cache(cache)
-                    return name
-            except Exception:
-                pass
-        return None
-
     # ── Macro US ──
     if asset_type == "macro" and market == "us":
         return MACRO_US_NAMES.get(code)
@@ -244,6 +170,7 @@ def label_data(force: bool, refresh: bool):
         console.print("[yellow]No asset directories found under data/[/yellow]")
         return
 
+    gw = DataGateway()
     stats = {"created": 0, "skipped": 0, "overwritten": 0, "no_name": 0}
     table = Table(title="label-data")
     table.add_column("Asset", style="cyan")
@@ -261,7 +188,7 @@ def label_data(force: bool, refresh: bool):
                 stats["skipped"] += 1
             continue
 
-        name = _resolve_name(asset_type, market, code, refresh)
+        name = _resolve_name(gw, asset_type, market, code, refresh)
         if not name:
             stats["no_name"] += 1
             table.add_row(full, "—", "[yellow]no name[/yellow]")
