@@ -6,10 +6,9 @@ No file I/O or CLI concerns here.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import date, timedelta
+from dataclasses import dataclass
+from datetime import date
 from enum import Enum
-from typing import Optional
 
 import pandas as pd
 
@@ -33,7 +32,7 @@ DAILY_OHLCV_COLS = {"date", "open", "high", "low", "close", "volume"}
 
 # Freshness thresholds in days — how stale before WARNING
 FRESHNESS_DAYS: dict[str, int] = {
-    "daily": 3,       # daily data should be <= 2 trading days old
+    "daily": 3,       # warn if more than 3 days stale
     "monthly": 35,    # monthly macro indicators
     "quarterly": 95,  # quarterly financials
 }
@@ -79,24 +78,22 @@ def validate_ohlcv(df: pd.DataFrame, asset_path: str) -> list[ValidationIssue]:
             asset_path=asset_path,
         ))
 
-    # close should be within [low, high] — allow 0.5% tolerance for rounding
-    if "close" in df.columns and "high" in df.columns and "low" in df.columns:
-        above_high = (df["close"] > df["high"] * 1.005).sum()
-        below_low = (df["close"] < df["low"] * 0.995).sum()
-        if above_high > 0:
-            issues.append(ValidationIssue(
-                severity=Severity.WARNING,
-                category="ohlcv",
-                message=f"Close > High in {above_high} rows",
-                asset_path=asset_path,
-            ))
-        if below_low > 0:
-            issues.append(ValidationIssue(
-                severity=Severity.WARNING,
-                category="ohlcv",
-                message=f"Close < Low in {below_low} rows",
-                asset_path=asset_path,
-            ))
+    above_high = (df["close"] > df["high"] * 1.005).sum()
+    below_low = (df["close"] < df["low"] * 0.995).sum()
+    if above_high > 0:
+        issues.append(ValidationIssue(
+            severity=Severity.WARNING,
+            category="ohlcv",
+            message=f"Close > High in {above_high} rows",
+            asset_path=asset_path,
+        ))
+    if below_low > 0:
+        issues.append(ValidationIssue(
+            severity=Severity.WARNING,
+            category="ohlcv",
+            message=f"Close < Low in {below_low} rows",
+            asset_path=asset_path,
+        ))
 
     return issues
 
@@ -141,7 +138,7 @@ def validate_freshness(df: pd.DataFrame, asset_path: str,
     if len(dates) == 0:
         return issues
 
-    threshold = FRESHNESS_DAYS.get(data_type, 3)
+    threshold = FRESHNESS_DAYS.get(data_type, FRESHNESS_DAYS["daily"])
     last_date = dates.max()
     days_since = (date.today() - last_date).days
 
@@ -151,7 +148,6 @@ def validate_freshness(df: pd.DataFrame, asset_path: str,
             category="freshness",
             message=f"Stale: last data {last_date} ({days_since} days ago, threshold {threshold}d)",
             asset_path=asset_path,
-            detail=f"last_date={last_date}, days_since={days_since}",
         ))
 
     return issues
