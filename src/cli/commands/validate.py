@@ -8,9 +8,12 @@ from rich.panel import Panel
 from rich.table import Table
 
 from src.data.validator import (
+    DAILY_OHLCV_COLS,
     Severity,
     ValidationIssue,
     validate_daily,
+    validate_dates,
+    validate_freshness,
 )
 
 console = Console()
@@ -25,6 +28,19 @@ def _walk_parquets(data_dir: Path) -> list[tuple[str, Path]]:
         asset_path = str(rel.with_suffix("")).replace("\\", "/")
         result.append((asset_path, parquet_path))
     return sorted(result, key=lambda x: x[0])
+
+
+def _validate_asset(df, asset_path: str, data_type: str) -> list[ValidationIssue]:
+    """Run appropriate validations based on data schema."""
+    cols = set(df.columns)
+    if DAILY_OHLCV_COLS.issubset(cols):
+        return validate_daily(df, asset_path, data_type)
+
+    # Non-OHLCV data (macro, flow, etc.): only date + freshness
+    issues = []
+    issues.extend(validate_dates(df, asset_path))
+    issues.extend(validate_freshness(df, asset_path, data_type))
+    return issues
 
 
 @click.command("validate")
@@ -74,7 +90,7 @@ def validate_data(data_dir: str, errors_only: bool):
         elif fname in ("quarterly",):
             data_type = "quarterly"
 
-        df_issues = validate_daily(df, asset_path, data_type)
+        df_issues = _validate_asset(df, asset_path, data_type)
         all_issues.extend(df_issues)
         for i in df_issues:
             if i.severity == Severity.ERROR:
