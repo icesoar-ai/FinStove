@@ -57,6 +57,16 @@ CLI summary / market-scan 等纯展示命令
             → 返回 DataFrame 或 空
 ```
 
+## 名称查询路径
+
+```
+CLI label-data 等需要可读名称
+  → gw.name(asset, market, code)            ← 查缓存 → 未命中调 Provider → 写回缓存
+       → data/stock_names.json (JSON 文件)  ← 持久化名称缓存
+            → AKShare stock_individual_info_em / fund_etf_spot_em
+            → yfinance Ticker.info
+```
+
 ## 读路径 (读写优先)
 
 ```

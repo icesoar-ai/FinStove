@@ -40,10 +40,12 @@ data/index/us/SPX/__标普500.name.txt
 data/forex/global/USDCNY/__美元_人民币.name.txt
 ```
 
-名称来源：A 股 AKShare + stock_names.json 缓存，指数/商品/外汇/加密硬编码中文映射，美股/港股 yfinance。
+名称来源：
+- A股/美股/港股/ETF → DataGateway.name() 统一查询，内建 name cache + AKShare/yfinance 调用
+- 指数/商品/外汇/加密 → 硬编码中文映射
 
 ## 注意事项
 
 - 幂等操作，可随时重复执行
-- A 股名称依赖 AKShare API，限流时使用缓存（`stock_names.json`）
+- 所有名称查询统一通过 DataGateway，不直接碰 Provider
 - 不影响 Parquet 数据读写

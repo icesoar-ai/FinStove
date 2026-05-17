@@ -71,7 +71,7 @@ docs/               # 文档
 
 ### Data Layer (`src/data/`)
 
-DataGateway (`gateway.py`) 为 CLI 唯一入口，持有 8 个 Provider，内置 A股三级降级链 (AKShare → yfinance → Baostock)，统一 Parquet/SQLite 读写路径，聚合宏观数据。
+DataGateway (`gateway.py`) 为 CLI 唯一入口，持有 8 个 Provider，内置 A股三级降级链 (AKShare → yfinance → Baostock)，统一 Parquet/SQLite 读写路径、名称查询、聚合宏观数据。
 
 存储方案：Parquet（原始数据）+ SQLite（API 请求缓存）两层架构。Parquet 是真正的数据源，SQLite 只是 API 去重缓存。
 
