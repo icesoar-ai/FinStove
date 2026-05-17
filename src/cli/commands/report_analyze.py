@@ -8,6 +8,7 @@ from src.analysis.report_text import (
     _find_latest_report, _extract_audit, _extract_metrics,
     _extract_risk_factors, _extract_outlook,
 )
+from src.cli.colors import load_scheme as _load_cs
 from src.utils.ticker import parse_ticker, stock_dir
 
 console = Console()
@@ -41,10 +42,11 @@ def report_analyze(ticker: str):
         return
 
     # 1. Audit opinion
+    _cs = _load_cs()
     audit_signals = _extract_audit(text)
     if audit_signals:
         s = audit_signals[0]
-        color = "green" if s.direction == "bullish" else "red"
+        color = _cs.up if s.direction == "bullish" else _cs.down
         panel = Panel.fit(f"[{color}]审计意见: {s.description}[/]", border_style=color)
         console.print(panel)
     else:
@@ -75,7 +77,7 @@ def report_analyze(ticker: str):
     if risk_signals:
         console.print("\n[bold]风险因素:[/bold]")
         for s in risk_signals:
-            c = "red" if s.direction == "bearish" else "dim"
+            c = _cs.down if s.direction == "bearish" else "dim"
             console.print(f"  [{c}]• {s.description}[/]")
 
     # 4. Management outlook
@@ -83,5 +85,5 @@ def report_analyze(ticker: str):
     if outlook_signals:
         console.print("\n[bold]管理层展望:[/bold]")
         for s in outlook_signals:
-            c = "green" if s.direction == "bullish" else "red"
+            c = _cs.up if s.direction == "bullish" else _cs.down
             console.print(f"  [{c}]• {s.description}[/]")

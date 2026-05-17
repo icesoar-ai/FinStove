@@ -5,6 +5,7 @@ from rich.table import Table
 
 from src.analysis.base import AnalysisContext
 from src.analysis.scenario import ScenarioAnalyzer
+from src.cli.colors import load_scheme as _load_cs
 from src.data.gateway import DataGateway
 from src.data.base import Market
 from src.data.models import Ticker as TickerModel
@@ -52,7 +53,7 @@ def scenario(ticker: str, start: str, end: str, market: str):
     analyzer = ScenarioAnalyzer()
     result = analyzer.analyze(ctx)
 
-    color = "green" if result.score > 0.2 else ("red" if result.score < -0.2 else "yellow")
+    color = _load_cs().score_color(result.score, 0.2)
     panel = Panel(
         f"[{color}]情景评分：{result.score:+.1f}[/{color}] | 置信度：{result.confidence:.0%}",
         title="[bold]情景分析[/bold]",

@@ -5,6 +5,7 @@ from rich.table import Table
 
 from src.analysis.base import AnalysisContext
 from src.analysis.correlation import CorrelationAnalyzer
+from src.cli.colors import load_scheme as _load_cs
 from src.data.base import Market as MktEnum
 from src.data.models import Ticker as TickerModel
 from src.data.gateway import DataGateway
@@ -28,7 +29,8 @@ def correlation_check():
     result = analyzer.analyze(ctx)
 
     regime = result.details.get("regime", "unknown")
-    regime_color = "green" if regime == "Risk-On" else ("red" if regime == "Risk-Off" else "yellow")
+    _cs = _load_cs()
+    regime_color = _cs.up if regime == "Risk-On" else (_cs.down if regime == "Risk-Off" else _cs.warning)
     panel = Panel(
         f"[{regime_color}]跨市场体制：{regime}[/{regime_color}] | 评分：{result.score:+.1f} | 置信度：{result.confidence:.0%}",
         title="[bold]跨市场联动分析[/bold]",

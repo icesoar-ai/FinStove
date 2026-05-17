@@ -4,22 +4,19 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from src.cli.colors import load_scheme
 from src.data.base import Market
 from src.data.gateway import DataGateway
 from src.utils.ticker import detect_market, parse_ticker
 
 console = Console()
-CHG_STYLE = {"+": "green", "-": "red", "0": "dim"}
+_C = load_scheme()
 
 # ---- helpers ----
 
 def _chg_color(val: float) -> str:
     """Return Rich style tag for change value."""
-    if val > 0:
-        return "green"
-    elif val < 0:
-        return "red"
-    return "dim"
+    return _C.chg_color(val)
 
 
 def _fmt_chg(val: float | None) -> str:
@@ -189,7 +186,7 @@ def _market_movers(gw: DataGateway, market: str, limit: int):
     bottom = df.nsmallest(limit, "_chg")
 
     # Gainers
-    gain_table = Table(title=f"涨幅榜 TOP{limit}", border_style="red")
+    gain_table = Table(title=f"涨幅榜 TOP{limit}", border_style=_C.up)
     gain_table.add_column("代码", style="dim")
     gain_table.add_column("名称", style="bold")
     gain_table.add_column("最新价", justify="right")
@@ -208,7 +205,7 @@ def _market_movers(gw: DataGateway, market: str, limit: int):
     console.print(gain_table)
 
     # Losers
-    loss_table = Table(title=f"跌幅榜 TOP{limit}", border_style="green")
+    loss_table = Table(title=f"跌幅榜 TOP{limit}", border_style=_C.down)
     loss_table.add_column("代码", style="dim")
     loss_table.add_column("名称", style="bold")
     loss_table.add_column("最新价", justify="right")

@@ -5,17 +5,14 @@ from rich.panel import Panel
 from rich.table import Table
 
 from src.analysis.sentiment import _compute_sentiment
+from src.cli.colors import load_scheme as _load_cs
 from src.utils.ticker import parse_ticker
 
 console = Console()
 
 
 def _color_score(s: float) -> str:
-    if s > 0.2:
-        return "green"
-    elif s < -0.2:
-        return "red"
-    return "yellow"
+    return _load_cs().score_color(s, 0.2)
 
 
 @click.command("sentiment")

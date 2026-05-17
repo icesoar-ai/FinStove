@@ -4,19 +4,21 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from src.cli.colors import load_scheme
 from src.data.gateway import DataGateway
 from src.data.base import Market
 from src.data.storage import ParquetStorage
 from src.utils.ticker import parse_ticker, stock_dir
 
 console = Console()
+_C = load_scheme()
 
 
 def _fmt_chg(val: float | None) -> str:
     if val is None or val != val:
         return "[dim]—[/dim]"
     sign = "+" if val > 0 else ""
-    color = "green" if val > 0 else "red" if val < 0 else "dim"
+    color = _C.chg_color(val)
     return f"[{color}]{sign}{val:.2f}%[/]"
 
 

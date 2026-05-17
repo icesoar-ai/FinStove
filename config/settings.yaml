@@ -58,6 +58,7 @@ analysis:
 output:
   default_format: "standard"                  # brief | standard | full
   color: true                                 # Rich 终端彩色输出
+  color_scheme: cn                            # 涨跌配色: cn (红涨绿跌) | us (绿涨红跌) | auto (按市场自适应)
   report:
     template_dir: "config/templates"          # Jinja2 模板目录
     include_disclaimer: true                  # 是否包含免责声明

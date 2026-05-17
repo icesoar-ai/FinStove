@@ -5,6 +5,7 @@ from rich.table import Table
 
 from src.analysis.base import AnalysisContext
 from src.analysis.risk import RiskAnalyzer
+from src.cli.colors import load_scheme as _load_cs
 from src.data.gateway import DataGateway
 from src.data.base import Market
 from src.data.models import Ticker as TickerModel
@@ -51,7 +52,8 @@ def risk_check(ticker: str, start: str, end: str, market: str):
     analyzer = RiskAnalyzer()
     result = analyzer.analyze(ctx)
 
-    color = "red" if result.score < -0.4 else ("yellow" if result.score < -0.2 else "green")
+    _cs = _load_cs()
+    color = _cs.down if result.score < -0.4 else (_cs.warning if result.score < -0.2 else _cs.up)
     panel = Panel(
         f"[{color}]风险评分：{result.score:+.1f}[/{color}] | 置信度：{result.confidence:.0%}",
         title="[bold]风险评估[/bold]",

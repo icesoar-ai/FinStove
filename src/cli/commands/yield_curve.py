@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from src.cli.colors import load_scheme as _load_cs
 from src.data.gateway import DataGateway
 
 console = Console()
@@ -67,14 +68,15 @@ def yield_curve_data(history: bool):
 
             # 10Y-2Y spread
             spread = None
+            _cs = _load_cs()
             if curve.get("10Y") and curve.get("2Y"):
                 spread = curve["10Y"] - curve["2Y"]
-                color = "red" if spread < 0 else "green"
+                color = _cs.down if spread < 0 else _cs.up
                 lines.append(f"\n  [bold]10Y-2Y Spread:[/bold] [{color}]{spread:+.2f}%[/{color}]")
 
             if curve.get("10Y") and curve.get("3M"):
                 spread_10y3m = curve["10Y"] - curve["3M"]
-                color = "red" if spread_10y3m < 0 else "green"
+                color = _cs.down if spread_10y3m < 0 else _cs.up
                 lines.append(f"  [bold]10Y-3M Spread:[/bold] [{color}]{spread_10y3m:+.2f}%[/{color}]")
 
             panel = Panel(

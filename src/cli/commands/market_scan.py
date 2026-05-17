@@ -1,13 +1,21 @@
 """Multi-market overview scan — trends across all asset classes from Parquet data."""
+import yaml
+from pathlib import Path
+
 import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from datetime import date, timedelta
 
+from src.cli.colors import ColorScheme
 from src.data.gateway import DataGateway
 
 console = Console()
+
+_SCHEME_NAME = (yaml.safe_load(
+    open(Path(__file__).resolve().parents[3] / "config" / "settings.yaml")
+) or {}).get("output", {}).get("color_scheme", "cn")
 
 # Scan targets: (asset_type, market, symbol, label, group)
 SCAN_TARGETS = [
@@ -75,7 +83,7 @@ def _get_performance(gw: DataGateway, asset_type: str, market: str, symbol: str)
             ret["trend"] = "↑" if close.iloc[-1] > ma200 else "↓"
             ret["ma_state"] = "强" if ma50 > ma200 else "弱"
 
-        return {"price": latest, **ret}
+        return {"price": latest, "_mkt": market, **ret}
     except Exception:
         return None
 
@@ -114,6 +122,10 @@ def market_scan(group: str = None):
         table.add_column("6月")
         table.add_column("趋势")
 
+        # Per-group color scheme (auto detects market from first item)
+        _mkt = items[0][1].get("_mkt", "us") if items else "us"
+        c = ColorScheme.get(_SCHEME_NAME, _mkt)
+
         for label, p in items:
             price_str = f"{p['price']:,.1f}" if label not in ("美元/日元", "美元/人民币") else f"{p['price']:,.4f}"
 
@@ -121,8 +133,7 @@ def market_scan(group: str = None):
                 if v is None:
                     return ("-", "white")
                 s = f"{v:+.1f}%"
-                c = "green" if v > 0 else "red"
-                return (s, c)
+                return (s, c.up if v > 0 else c.down)
 
             d1, d1c = _color(p.get("1d"))
             d5, d5c = _color(p.get("5d"))
@@ -130,7 +141,7 @@ def market_scan(group: str = None):
             d3m, d3mc = _color(p.get("3m"))
             d6m, d6mc = _color(p.get("6m"))
             trend = p.get("trend", "-")
-            trend_c = "green" if trend == "↑" else "red" if trend == "↓" else "white"
+            trend_c = c.trend_color(trend) if trend in ("↑", "↓") else "white"
 
             table.add_row(
                 label, price_str,

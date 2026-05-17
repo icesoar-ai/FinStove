@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from src.cli.colors import load_scheme, ColorScheme
 from src.data.gateway import DataGateway
 
 console = Console()
@@ -158,6 +159,8 @@ def _fmt_val(val, is_pct: bool = False, is_forex: bool = False) -> str:
     return f"{val:.4f}"
 
 
+_C = load_scheme()
+
 def _change_str(cur, prev) -> tuple[str, str]:
     """Return (change_string, color_name)."""
     if cur is None or prev is None or prev == 0:
@@ -165,7 +168,7 @@ def _change_str(cur, prev) -> tuple[str, str]:
     pct = (cur - prev) / prev * 100
     if abs(pct) < 0.05:
         return "  0.0%", "dim"
-    return f"{pct:+.1f}%", "green" if pct > 0 else "red"
+    return f"{pct:+.1f}%", _C.chg_color(pct)
 
 
 @click.command("summary")
@@ -237,7 +240,7 @@ def daily_summary(alert: bool):
                 if prev is not None and prev != 0:
                     delta = cur - prev
                     chg_str = f"{delta:+.1f}亿"
-                    color = "green" if delta > 0 else "red"
+                    color = _C.up if delta > 0 else _C.down
                 else:
                     chg_str, color = "    --", "dim"
             else:
