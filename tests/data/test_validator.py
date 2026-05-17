@@ -64,16 +64,41 @@ class TestValidateOHLCV:
         issues = validate_ohlcv(df, "test")
         assert any("Negative volume" in i.message for i in issues)
 
-    def test_close_outside_range(self):
+    def test_close_above_high(self):
         df = _make_df(close=[101.0, 200.0, 103.0, 102.5, 104.0])
         issues = validate_ohlcv(df, "test")
+        assert len(issues) == 1
+        assert issues[0].category == "ohlcv"
+        assert "Close > High" in issues[0].message
+
+    def test_close_below_low(self):
+        df = _make_df(close=[101.0, 50.0, 103.0, 102.5, 104.0])
+        issues = validate_ohlcv(df, "test")
+        assert len(issues) == 1
+        assert issues[0].category == "ohlcv"
+        assert "Close < Low" in issues[0].message
+
+    def test_close_tolerance_boundary(self):
+        # Close at exactly high * 1.005 should NOT trigger (tolerance)
+        h = 100.0
+        df = _make_df(high=[h], low=[h - 1], close=[h * 1.005], volume=[1],
+                      open=[h], date=[date.today() - timedelta(days=1)])
+        assert validate_ohlcv(df, "test") == []
+
+        # Close just above high * 1.005 SHOULD trigger
+        df2 = _make_df(high=[h], low=[h - 1], close=[h * 1.005 + 0.01], volume=[1],
+                       open=[h], date=[date.today() - timedelta(days=1)])
+        issues = validate_ohlcv(df2, "test")
         assert any("Close > High" in i.message for i in issues)
 
     def test_missing_ohlcv_cols_skipped(self):
-        df = pd.DataFrame({"date": [], "value": []})
+        df = pd.DataFrame({"date": [date.today()], "symbol": ["AAPL"]})
         assert validate_ohlcv(df, "test") == []
 
-
+    def test_empty_dataframe(self):
+        df = _make_df()
+        empty = df.iloc[:0]
+        assert validate_ohlcv(empty, "test") == []
 class TestValidateDates:
     def test_valid_dates(self):
         df = _make_df()
@@ -85,10 +110,9 @@ class TestValidateDates:
         assert any("Future dates" in i.message for i in issues)
 
     def test_non_monotonic(self):
-        df = _make_df(date=sorted(
-            [date.today() - timedelta(days=i) for i in range(5, 0, -1)],
-            reverse=True,
-        ))
+        t = date.today()
+        df = _make_df(date=[t, t - timedelta(days=1), t - timedelta(days=3),
+                            t - timedelta(days=2), t - timedelta(days=4)])
         issues = validate_dates(df, "test")
         assert any("not monotonically" in i.message for i in issues)
 
@@ -111,6 +135,12 @@ class TestValidateFreshness:
         df = _make_df(date=old_dates)
         issues = validate_freshness(df, "test", "monthly")
         assert len(issues) == 1
+        assert issues[0].severity == Severity.WARNING
+
+    def test_empty_date_column(self):
+        df = _make_df()
+        empty = df.iloc[:0]
+        assert validate_freshness(empty, "test", "daily") == []
 
     def test_no_date_column(self):
         df = pd.DataFrame({"value": [1, 2, 3]})
@@ -133,5 +163,7 @@ class TestValidateDaily:
             date=sorted(old_dates, reverse=True),  # non-monotonic + stale
         )
         issues = validate_daily(df, "test")
-        # Expect: high<low, negative volume, non-monotonic dates, stale
-        assert len(issues) >= 3
+        # high<low (ERROR) + negative volume (ERROR) + close>high (WARNING) + non-monotonic dates (WARNING) + stale (WARNING)
+        assert len(issues) == 5
+        assert sum(1 for i in issues if i.severity == Severity.ERROR) == 2
+        assert sum(1 for i in issues if i.severity == Severity.WARNING) == 3
