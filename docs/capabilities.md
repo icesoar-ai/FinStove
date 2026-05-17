@@ -46,6 +46,7 @@
 | Skill | 说明 |
 |-------|------|
 | `/label-data` | 为 data/ 下所有资产目录生成 `__{简称}__.name.txt` 标记文件（`--force` 覆盖，`--refresh` 刷新） |
+| `/validate` | 数据校验 — Parquet 文件完整性/OHLCV 合理性/日期/新鲜度检查 |
 
 ---
 
@@ -114,4 +115,6 @@
 ./bin/fstove label-data          # 为 data/ 下所有资产生成 __{名称}.name.txt 标记文件
 ./bin/fstove label-data --force  # 覆盖已存在的 marker
 ./bin/fstove label-data --refresh # 清除名称缓存后重新查 API（股票改名时用）
+./bin/fstove validate             # 数据校验
+./bin/fstove validate --errors-only  # 仅显示错误
 ```

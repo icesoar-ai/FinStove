@@ -229,6 +229,7 @@ diskcache (SQLite缓存)
 | ETF CN 日线降级 | 已实现 (AKShare `fund_etf_hist_em` → yfinance) |
 | 读写路径统一 | 已实现 (`ParquetStorage.dir_path` / `file_path` 统一所有路径生成) |
 | 目录命名统一 | 已实现 (`{code}.{suffix}` — `601318.SH`, `00700.HK`, `AAPL.US`) |
+| 数据校验 | 已实现 (`validate` CLI — 列完整性/OHLCV 合理性/日期/新鲜度) |
 | 分析模块并行化 | 未实现 |
 
 ### 输出
