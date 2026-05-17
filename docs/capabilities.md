@@ -45,7 +45,7 @@
 
 | Skill | 说明 |
 |-------|------|
-| `/label-data` | 为 data/ 下所有资产目录生成 `__{名称}.name.txt` 标记文件（`--force` 覆盖，`--refresh` 刷新） |
+| `/label-data` | 为 data/ 下所有资产目录生成 `__{简称}__.name.txt` 标记文件（`--force` 覆盖，`--refresh` 刷新） |
 
 ---
 

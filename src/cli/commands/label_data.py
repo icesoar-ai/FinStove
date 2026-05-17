@@ -189,9 +189,12 @@ def _existing_markers(dir_path: Path) -> set[str]:
 
 
 def _write_marker(dir_path: Path, name: str) -> str:
-    """Write marker file. Returns 'created', 'skipped', or 'overwritten'."""
-    safe = name.replace("/", "_").replace(":", "_").replace("?", "")
-    filename = f"__{safe}.name.txt"
+    """Write marker file. Returns 'created', 'skipped', or 'overwritten'.
+
+    Filename: __{sanitized_name}__.name.txt
+    """
+    safe = name.replace(".", "-").replace(" ", "_").replace("/", "_").replace(":", "_").replace("?", "")
+    filename = f"__{safe}__.name.txt"
     target = dir_path / filename
 
     if target.exists():
@@ -231,10 +234,11 @@ def _collect_dirs() -> list[tuple[str, str, str, Path]]:
 @click.option("--refresh", is_flag=True, default=False,
               help="Clear name cache and re-fetch from API (for renamed stocks)")
 def label_data(force: bool, refresh: bool):
-    """为 data/ 下每个资产目录生成 __{名称}.name.txt 标记文件.
+    """为 data/ 下每个资产目录生成 __{简称}__.name.txt 标记文件.
 
     遍历 data/ 目录树，反推资产类型和市场，查中文名称后写入 marker 文件。
     A股走 AKShare，美股/港股走 yfinance，指数/商品/外汇/加密/宏观/资金流向走硬编码映射。
+    文件名规范化: .→- 空格→_。
     """
     dirs = _collect_dirs()
     if not dirs:
