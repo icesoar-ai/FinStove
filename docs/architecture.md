@@ -203,8 +203,8 @@ diskcache (SQLite缓存)
 | FRED | 需 `FRED_API_KEY` 环境变量（`.env` 自动加载）；仅美国，无中国/欧洲宏观 |
 | CoinGecko | 免费版速率限制严格 (~10-30次/分钟)；历史数据精度不如交易所 API |
 | Baostock | 仅 A 股日线，无财务/指数/汇率数据，精度和时效性略低 |
-| CNINFO | 仅 A 股年报，缺半年报/季报 |
-| SEC EDGAR | 仅支持 10-K 年报，无 10-Q 季报；下载速度慢 |
+| CNINFO | 仅 A 股；部分 PDF 转 Markdown 后表格丢失 |
+| SEC EDGAR | 10-K/10-Q 均支持；下载速度慢 |
 | News | 仅 CN 新闻 (东方财富 + CCTV)，无 US/HK 源 |
 
 ### 功能覆盖

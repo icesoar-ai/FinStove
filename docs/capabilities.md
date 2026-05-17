@@ -33,7 +33,7 @@
 | `/macro-check` | 宏观 | CN 15+指标 + US via FRED + DXY + VIX |
 | `/sentiment <TICKER>` | 情绪 | jieba 分词 + 金融情感词典 |
 | `/report-analyze <TICKER>` | 年报文本 | 审计意见/指标提取/风险因素/管理层展望 |
-| `/full-report <TICKER>` | 综合 | 10 维度加权评分 + 目标价 + 风险 + 情景 |
+| `/full-report <TICKER>` | 综合 | 9 维度加权评分 |
 | `/review <TICKER>` | 跟踪 | 历史判断回顾，胜率 + 偏差度 |
 | `/correlation-check` | 跨市场 | 黄金/DXY/VIX → Risk-On/Risk-Off |
 | `/risk-check <TICKER>` | 风险 | VaR/CVaR/最大回撤/波动率/流动性 |
