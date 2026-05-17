@@ -16,8 +16,8 @@ trigger: /fetch-yield-curve
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main fetch yield-curve
-python -m src.cli.main fetch yield-curve --history    # 历史模式
+./bin/fstove fetch yield-curve
+./bin/fstove fetch yield-curve --history    # 历史模式
 ```
 
 ## 数据来源

@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
-stocks-cli = "src.cli.main:cli"
+fstove = "src.cli.main:cli"
 
 [project.optional-dependencies]
 fred = ["fredapi>=0.5.0"]

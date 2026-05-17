@@ -30,7 +30,7 @@
 ```
 用户 /analyze-stock 600519.SH
   → Claude Code Skill (.claude/skills/analyze-stock.md)
-    → python -m src.cli.main analyze-stock 600519.SH
+    → ./bin/fstove analyze-stock 600519.SH
       → Data Layer (providers → cache → normalizer)
       → Analysis Layer (7 modules, 并行)
       → Integration Layer (scorer → aggregator → report)

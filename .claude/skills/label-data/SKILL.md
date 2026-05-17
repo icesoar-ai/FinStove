@@ -19,14 +19,14 @@ trigger: /label-data
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main label-data
+./bin/fstove label-data
 ```
 
 如果用户要求刷新或覆盖，加 `--force` 或 `--refresh`：
 
 ```bash
-python -m src.cli.main label-data --force    # 覆盖已有
-python -m src.cli.main label-data --refresh  # 清缓存重查 API
+./bin/fstove label-data --force    # 覆盖已有
+./bin/fstove label-data --refresh  # 清缓存重查 API
 ```
 
 ## 效果

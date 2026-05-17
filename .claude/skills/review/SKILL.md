@@ -15,7 +15,7 @@ trigger: /review
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main review "<TICKER>"
+./bin/fstove review "<TICKER>"
 ```
 
 展示历史预测 vs 实际走势，含准确率和平均收益统计。

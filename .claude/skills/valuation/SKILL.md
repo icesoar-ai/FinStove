@@ -17,7 +17,7 @@ trigger: /valuation
 ## 执行
 
 ```bash
-python -m src.cli.main valuation <TICKER>
+./bin/fstove valuation <TICKER>
 ```
 
 ## 数据要求

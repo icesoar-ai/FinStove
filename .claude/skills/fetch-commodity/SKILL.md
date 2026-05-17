@@ -33,7 +33,7 @@ trigger: /fetch-commodity
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main fetch commodity [SYMBOL]
+./bin/fstove fetch commodity [SYMBOL]
 ```
 
 不传 SYMBOL 时拉取全部商品。

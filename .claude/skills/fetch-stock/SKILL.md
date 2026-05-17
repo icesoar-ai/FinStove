@@ -20,9 +20,9 @@ trigger: /fetch-stock
 
 | 参数 | CLI 命令 | 获取内容 | 存储 |
 |------|---------|---------|------|
-| `ohlcv` | `python -m src.cli.main fetch ohlcv <TICKER>` | 日线 OHLCV | `data/stock/cn/{dir}/daily.parquet` |
-| `financials` | `python -m src.cli.main fetch financials <TICKER>` | 财务摘要 (25项) + 详细三表 (资产负债表/利润表/现金流量表) + 历史分红 | `data/stock/cn/{dir}/financials.parquet` + `income.parquet` + `balance_sheet.parquet` + `cashflow.parquet` + `dividends.parquet` |
-| `reports` | `python -m src.cli.main fetch reports <TICKER>` | 年报 PDF + Markdown | `data/stock/cn/{dir}/reports/` |
+| `ohlcv` | `./bin/fstove fetch ohlcv <TICKER>` | 日线 OHLCV | `data/stock/cn/{dir}/daily.parquet` |
+| `financials` | `./bin/fstove fetch financials <TICKER>` | 财务摘要 (25项) + 详细三表 (资产负债表/利润表/现金流量表) + 历史分红 | `data/stock/cn/{dir}/financials.parquet` + `income.parquet` + `balance_sheet.parquet` + `cashflow.parquet` + `dividends.parquet` |
+| `reports` | `./bin/fstove fetch reports <TICKER>` | 年报 PDF + Markdown | `data/stock/cn/{dir}/reports/` |
 
 无参数时默认获取全部五类数据：日线行情 + 财务摘要 + 三张表 + 分红 + 年报。
 

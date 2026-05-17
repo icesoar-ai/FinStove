@@ -56,16 +56,16 @@
 ### 数据抓取 (`fetch`)
 
 ```bash
-python -m src.cli.main fetch ohlcv <TICKER> [--start DATE] [--intraday]
-python -m src.cli.main fetch index [MARKET] [CODE] [--spot]
-python -m src.cli.main fetch commodity [CODE] [--spot]
-python -m src.cli.main fetch forex [PAIR] [--spot]
-python -m src.cli.main fetch crypto [SYMBOL] [--spot]
-python -m src.cli.main fetch financials <TICKER>
-python -m src.cli.main fetch reports <TICKER>
-python -m src.cli.main fetch etf <TICKER>
-python -m src.cli.main fetch flow
-python -m src.cli.main fetch yield-curve [--history]
+./bin/fstove fetch ohlcv <TICKER> [--start DATE] [--intraday]
+./bin/fstove fetch index [MARKET] [CODE] [--spot]
+./bin/fstove fetch commodity [CODE] [--spot]
+./bin/fstove fetch forex [PAIR] [--spot]
+./bin/fstove fetch crypto [SYMBOL] [--spot]
+./bin/fstove fetch financials <TICKER>
+./bin/fstove fetch reports <TICKER>
+./bin/fstove fetch etf <TICKER>
+./bin/fstove fetch flow
+./bin/fstove fetch yield-curve [--history]
 ```
 
 | 命令 | 覆盖 | 说明 |
@@ -84,34 +84,34 @@ python -m src.cli.main fetch yield-curve [--history]
 ### 实时行情 (`live`)
 
 ```bash
-python -m src.cli.main live spot              # 全球快照
-python -m src.cli.main live spot -m cn        # A股涨跌榜 (hk/us)
-python -m src.cli.main live spot <TICKER>     # 个股实时行情
-python -m src.cli.main live intraday <TICKER> [-i 5m]
+./bin/fstove live spot              # 全球快照
+./bin/fstove live spot -m cn        # A股涨跌榜 (hk/us)
+./bin/fstove live spot <TICKER>     # 个股实时行情
+./bin/fstove live intraday <TICKER> [-i 5m]
 ```
 
 ### 分析
 
 ```bash
-python -m src.cli.main analyze-stock <TICKER>      # 技术分析
-python -m src.cli.main macro-check                 # 宏观评估
-python -m src.cli.main valuation <TICKER>          # 估值分析 (10方法)
-python -m src.cli.main full-report <TICKER>        # 综合多维分析
-python -m src.cli.main sentiment <TICKER> [-d 7]   # 新闻情绪
-python -m src.cli.main report-analyze <TICKER>     # 年报文本分析
-python -m src.cli.main correlation-check           # 跨市场联动
-python -m src.cli.main risk-check <TICKER>         # 风险评估
-python -m src.cli.main benchmark <TICKER>          # 基准对比
-python -m src.cli.main scenario <TICKER>           # 情景分析
-python -m src.cli.main review <TICKER>             # 回顾历史判断
-python -m src.cli.main market-scan                 # 多市场扫描
-python -m src.cli.main summary                     # 每日数据汇总
+./bin/fstove analyze-stock <TICKER>      # 技术分析
+./bin/fstove macro-check                 # 宏观评估
+./bin/fstove valuation <TICKER>          # 估值分析 (10方法)
+./bin/fstove full-report <TICKER>        # 综合多维分析
+./bin/fstove sentiment <TICKER> [-d 7]   # 新闻情绪
+./bin/fstove report-analyze <TICKER>     # 年报文本分析
+./bin/fstove correlation-check           # 跨市场联动
+./bin/fstove risk-check <TICKER>         # 风险评估
+./bin/fstove benchmark <TICKER>          # 基准对比
+./bin/fstove scenario <TICKER>           # 情景分析
+./bin/fstove review <TICKER>             # 回顾历史判断
+./bin/fstove market-scan                 # 多市场扫描
+./bin/fstove summary                     # 每日数据汇总
 ```
 
 ### 工具
 
 ```bash
-python -m src.cli.main label-data          # 为 data/ 下所有资产生成 __{名称}.name.txt 标记文件
-python -m src.cli.main label-data --force  # 覆盖已存在的 marker
-python -m src.cli.main label-data --refresh # 清除名称缓存后重新查 API（股票改名时用）
+./bin/fstove label-data          # 为 data/ 下所有资产生成 __{名称}.name.txt 标记文件
+./bin/fstove label-data --force  # 覆盖已存在的 marker
+./bin/fstove label-data --refresh # 清除名称缓存后重新查 API（股票改名时用）
 ```

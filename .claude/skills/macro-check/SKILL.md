@@ -17,7 +17,7 @@ trigger: /macro-check
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main macro-check
+./bin/fstove macro-check
 ```
 
 ## 注意事项

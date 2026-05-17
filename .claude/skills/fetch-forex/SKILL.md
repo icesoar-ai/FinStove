@@ -32,7 +32,7 @@ trigger: /fetch-forex
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main fetch forex [PAIR]
+./bin/fstove fetch forex [PAIR]
 ```
 
 不传 PAIR 时拉取全部汇率对。

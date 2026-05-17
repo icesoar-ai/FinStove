@@ -17,7 +17,7 @@ trigger: /market-scan
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main market-scan
+./bin/fstove market-scan
 ```
 
 ## 注意事项

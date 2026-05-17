@@ -19,7 +19,7 @@ A股格式: `600519.SH`, `000858.SZ`
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main analyze-stock "<TICKER>"
+./bin/fstove analyze-stock "<TICKER>"
 ```
 
 将输出直接展示给用户。如果 error，按网络问题/限流/无效代码分别解释。

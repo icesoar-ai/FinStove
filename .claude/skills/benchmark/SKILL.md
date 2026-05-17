@@ -15,7 +15,7 @@ trigger: /benchmark
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main benchmark <TICKER>
+./bin/fstove benchmark <TICKER>
 ```
 
 ## 注意事项

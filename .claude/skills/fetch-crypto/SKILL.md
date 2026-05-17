@@ -32,8 +32,8 @@ trigger: /fetch-crypto
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main fetch crypto [SYMBOL]
-python -m src.cli.main fetch crypto [SYMBOL] --source coingecko   # 如需市值数据
+./bin/fstove fetch crypto [SYMBOL]
+./bin/fstove fetch crypto [SYMBOL] --source coingecko   # 如需市值数据
 ```
 
 不传 SYMBOL 时拉取 BTC + ETH。

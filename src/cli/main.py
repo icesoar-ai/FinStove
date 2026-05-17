@@ -32,10 +32,10 @@ from src.cli.commands.summary import daily_summary
 from src.cli.commands.label_data import label_data
 
 
-@click.group()
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(version="0.1.0")
 def cli():
-    """金融分析助手 CLI."""
+    """金融分析助手 CLI — 多市场金融分析系统."""
 
 
 # Groups

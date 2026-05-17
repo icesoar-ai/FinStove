@@ -15,7 +15,7 @@ trigger: /scenario
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main scenario <TICKER>
+./bin/fstove scenario <TICKER>
 ```
 
 ## 注意事项

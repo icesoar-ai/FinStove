@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+cd "$(dirname "$0")/.."
+exec python -c "
+import sys
+sys.argv = ['fstove'] + sys.argv[1:]
+from src.cli.main import cli
+cli()
+" "$@"

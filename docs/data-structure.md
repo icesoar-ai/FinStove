@@ -127,7 +127,7 @@ data/
 
 每个资产目录下可放置 `__{名称}.name.txt` 标记文件，方便在文件系统中直接识别资产。
 
-运行 `python -m src.cli.main label-data` 自动为 `data/` 下所有资产生成标记文件。
+运行 `./bin/fstove label-data` 自动为 `data/` 下所有资产生成标记文件。
 
 名称来源：A 股走 AKShare + `stock_names.json` 缓存，指数/商品/外汇/加密走硬编码中文映射，美股/港股走 yfinance。
 

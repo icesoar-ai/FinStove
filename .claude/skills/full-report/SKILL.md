@@ -15,7 +15,7 @@ trigger: /full-report
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main full-report "<TICKER>" --context long_term --format standard
+./bin/fstove full-report "<TICKER>" --context long_term --format standard
 ```
 
 输出包含：综合评分 + 分级判断 + 各维度评分表 + 信号摘要 + 风险/趋势/基准判断。

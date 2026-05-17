@@ -48,7 +48,7 @@ trigger: /fetch-index
 ## 唤醒后执行
 
 ```bash
-python -m src.cli.main fetch index [MARKET] [CODE]
+./bin/fstove fetch index [MARKET] [CODE]
 ```
 
 不传参数拉取全部指数。
