@@ -28,3 +28,9 @@ venv/
 
 # Cache
 ~/.cache/stocks/
+
+# Open Spec
+# Temporarily skip the files of OpenSpec.
+.claude/commands/opsx/
+.claude/skills/openspec-*/
+openspec/

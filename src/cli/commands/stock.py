@@ -39,7 +39,7 @@ def analyze_stock(ticker: str, start: str, end: str, market: str):
             end_fmt = gw._normalize_date(end) if "-" in end else end
             df = gw.get_daily(symbol, mkt, start_fmt, end_fmt)
         else:
-            df = gw.get_daily(symbol, mkt.value, start, end)
+            df = gw.get_daily(symbol, mkt, start, end)
 
         if df is None or df.empty:
             console.print("[red]No price data available.[/red]")
