@@ -1,5 +1,5 @@
 """Daily data update summary report — reads latest from all Parquet datasets."""
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import click
@@ -84,6 +84,12 @@ FLOW_SETS = [
 
 THRESHOLD_PCT = 2.0  # alert for changes > this %
 TODAY = date.today()
+# Use last trading day as reference to avoid false stale on weekends
+_REFERENCE_DATE = TODAY
+if TODAY.weekday() == 5:  # Saturday → use Friday
+    _REFERENCE_DATE = TODAY - timedelta(days=1)
+elif TODAY.weekday() == 6:  # Sunday → use Friday
+    _REFERENCE_DATE = TODAY - timedelta(days=2)
 
 
 def _read_latest(storage: ParquetStorage, asset_type: str, market: str,
@@ -210,8 +216,8 @@ def daily_summary(alert: bool):
             prev = info["prev"]
             dt = info["date"]
 
-            # Freshness
-            if dt and dt < TODAY:
+            # Freshness (relative to last trading day)
+            if dt and dt < _REFERENCE_DATE:
                 stale += 1
                 stale_list.append(f"{label} (最新: {dt})")
                 date_str = f"[yellow]{dt.strftime('%m-%d')}[/yellow]"

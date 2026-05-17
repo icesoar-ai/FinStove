@@ -140,23 +140,22 @@ def market_scan(group: str = None):
 
     # CN indices summary (from AKShare if available)
     console.print("[bold]A股指数[/bold]")
-    try:
-        cn_indexes = [
-            ("000001", "上证指数"), ("399001", "深证成指"), ("000300", "沪深300"),
-            ("399006", "创业板指"), ("000688", "科创50"), ("000016", "上证50"),
-        ]
-        gw = DataGateway()
-        from src.data.base import Market
-        for code, name in cn_indexes:
-            df = gw.get_index(Market.CN, code)
-            if df is not None and not df.empty and "close" in df.columns:
-                close = df["close"].astype(float)
-                latest = float(close.iloc[-1])
-                chg_pct = close.pct_change().iloc[-1] * 100 if len(close) >= 2 else 0
-                chg_c = "green" if chg_pct > 0 else "red"
-                trend = "↑" if len(close) >= 50 and close.iloc[-1] > close.tail(50).mean() else "↓"
-                console.print(f"  {name:8s}  {latest:>10,.1f}  [{chg_c}]{chg_pct:+.1f}%[/{chg_c}]  [{trend}]")
-    except Exception:
-        pass
+    cn_indexes = [
+        ("000001", "上证指数"), ("399001", "深证成指"), ("000300", "沪深300"),
+        ("399006", "创业板指"), ("000688", "科创50"), ("000016", "上证50"),
+    ]
+    gw = DataGateway()
+    from src.data.base import Market
+    for code, name in cn_indexes:
+        df = gw.get_index(Market.CN, code)
+        if df is not None and not df.empty and "close" in df.columns:
+            close = df["close"].astype(float)
+            latest = float(close.iloc[-1])
+            chg_pct = close.pct_change().iloc[-1] * 100 if len(close) >= 2 else 0
+            chg_c = "green" if chg_pct > 0 else "red"
+            trend = "↑" if len(close) >= 50 and close.iloc[-1] > close.tail(50).mean() else "↓"
+            console.print(f"  {name:8s}  {latest:>10,.1f}  [{chg_c}]{chg_pct:+.1f}%[/{chg_c}]  [{trend}]")
+        else:
+            console.print(f"  [dim]{name:8s}  无数据[/dim]")
 
     console.print("\n[dim]提示: 数据来自已拉取的 Parquet 文件，先运行 /fetch-all 更新。[/dim]")

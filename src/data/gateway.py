@@ -138,7 +138,7 @@ class DataGateway:
                 provider_fn.__name__, df, *args, ttl=ttl, **call_kwargs
             )
             self._storage.merge_and_save(df, asset, mkt, sym, dtype)
-        return df if df is not None else existing
+        return df if df is not None and not df.empty else existing
 
     def _fetch_and_save(
         self, asset: str, mkt: str, sym: str, dtype: str,
@@ -570,8 +570,12 @@ class DataGateway:
             ("CPIAUCSL", "cpi", "monthly", 45),
             ("UNRATE", "unemployment", "monthly", 45),
             ("GDP", "gdp", "quarterly", 120),
+            ("DGS30", "treasury_30y", "daily", 1),
             ("DGS10", "treasury_10y", "daily", 1),
+            ("DGS5", "treasury_5y", "daily", 1),
             ("DGS2", "treasury_2y", "daily", 1),
+            ("DGS1", "treasury_1y", "daily", 1),
+            ("DGS3MO", "treasury_3m", "daily", 1),
             ("NAPM", "pmi", "monthly", 45),
         ]
         for sid, sym, dtype, freshness in _fred_series:
