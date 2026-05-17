@@ -30,6 +30,7 @@ from src.cli.commands.scenario import scenario
 from src.cli.commands.market_scan import market_scan
 from src.cli.commands.summary import daily_summary
 from src.cli.commands.label_data import label_data
+from src.cli.commands.validate import validate_data
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -59,6 +60,7 @@ cli.add_command(scenario)
 cli.add_command(market_scan)
 cli.add_command(daily_summary)
 cli.add_command(label_data)
+cli.add_command(validate_data)
 
 
 if __name__ == "__main__":
