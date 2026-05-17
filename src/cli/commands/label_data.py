@@ -54,6 +54,27 @@ CRYPTO_NAMES = {
     "XRP": "XRP", "DOGE": "狗狗币", "ADA": "Cardano", "LINK": "Chainlink", "DOT": "Polkadot",
 }
 
+MACRO_US_NAMES = {
+    "gdp": "GDP", "cpi": "CPI", "fed_funds_rate": "联邦基金利率",
+    "unemployment": "失业率",
+    "treasury_30y": "30年期美债", "treasury_10y": "10年期美债",
+    "treasury_5y": "5年期美债", "treasury_2y": "2年期美债",
+    "treasury_1y": "1年期美债", "treasury_3m": "3月期美债",
+}
+
+MACRO_CN_NAMES = {
+    "gdp": "GDP", "cpi": "CPI", "ppi": "PPI",
+    "pmi": "制造业PMI", "caixin_pmi": "财新PMI", "non_man_pmi": "非制造业PMI",
+    "money_supply": "M2货币供应", "bond_yield": "国债收益率",
+    "industrial_production": "工业增加值", "retail_sales": "社会消费品零售",
+    "exports_yoy": "出口同比", "imports_yoy": "进口同比",
+    "shibor": "Shibor", "fx_reserves": "外汇储备", "lpr": "LPR",
+}
+
+FLOW_NAMES = {
+    "northbound": "北向资金", "southbound": "南向资金",
+}
+
 
 def _resolve_name(asset_type: str, market: str, code: str, refresh: bool) -> Optional[str]:
     """Resolve a human-readable name for an asset directory."""
@@ -147,7 +168,18 @@ def _resolve_name(asset_type: str, market: str, code: str, refresh: bool) -> Opt
                 pass
         return None
 
-    # ── Macro / Flow — skip, directory names are descriptive enough ──
+    # ── Macro US ──
+    if asset_type == "macro" and market == "us":
+        return MACRO_US_NAMES.get(code)
+
+    # ── Macro CN ──
+    if asset_type == "macro" and market == "cn":
+        return MACRO_CN_NAMES.get(code)
+
+    # ── Flow ──
+    if asset_type == "flow":
+        return FLOW_NAMES.get(code)
+
     return None
 
 
@@ -170,9 +202,7 @@ def _write_marker(dir_path: Path, name: str) -> str:
 
 
 def _collect_dirs() -> list[tuple[str, str, str, Path]]:
-    """Walk data/ and yield (asset_type, market, code, dir_path) tuples.
-    Skips macro/ and flow/ (already descriptive directory names).
-    """
+    """Walk data/ and yield (asset_type, market, code, dir_path) tuples."""
     results = []
     if not DATA_DIR.exists():
         return results
@@ -181,9 +211,6 @@ def _collect_dirs() -> list[tuple[str, str, str, Path]]:
         if not asset_dir.is_dir():
             continue
         asset_type = asset_dir.name
-        if asset_type in ("macro", "flow"):
-            continue
-
         for market_dir in sorted(asset_dir.iterdir()):
             if not market_dir.is_dir():
                 continue
@@ -207,7 +234,7 @@ def label_data(force: bool, refresh: bool):
     """为 data/ 下每个资产目录生成 __{名称}.name.txt 标记文件.
 
     遍历 data/ 目录树，反推资产类型和市场，查中文名称后写入 marker 文件。
-    A股走 AKShare，美股/港股走 yfinance，指数/商品/外汇/加密走硬编码映射。
+    A股走 AKShare，美股/港股走 yfinance，指数/商品/外汇/加密/宏观/资金流向走硬编码映射。
     """
     dirs = _collect_dirs()
     if not dirs:
