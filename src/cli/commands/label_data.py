@@ -39,16 +39,6 @@ FOREX_NAMES = {
     "DXY": "美元指数",
 }
 
-ETF_NAMES = {
-    "510050": "华夏上证50ETF", "510300": "华泰柏瑞沪深300ETF",
-    "510500": "南方中证500ETF", "159919": "嘉实沪深300ETF",
-    "159915": "易方达创业板ETF", "510880": "华泰柏瑞红利ETF",
-    "512880": "国泰中证全指证券公司ETF", "512100": "南方中证1000ETF",
-    "588000": "华夏科创50ETF", "513100": "国泰纳斯达克100ETF",
-    "513500": "博时标普500ETF", "513050": "易方达中概互联ETF",
-    "159949": "华安创业板50ETF",
-}
-
 CRYPTO_NAMES = {
     "BTC": "比特币", "ETH": "以太坊", "SOL": "Solana", "BNB": "BNB",
     "XRP": "XRP", "DOGE": "狗狗币", "ADA": "Cardano", "LINK": "Chainlink", "DOT": "Polkadot",
@@ -74,6 +64,23 @@ MACRO_CN_NAMES = {
 FLOW_NAMES = {
     "northbound": "北向资金", "southbound": "南向资金",
 }
+
+
+_ETF_NAME_MAP: dict[str, str] | None = None
+
+
+def _load_etf_name_map() -> dict[str, str]:
+    """Load all CN ETF names from AKShare (cached per session)."""
+    global _ETF_NAME_MAP
+    if _ETF_NAME_MAP is not None:
+        return _ETF_NAME_MAP
+    try:
+        import akshare as ak
+        df = ak.fund_etf_spot_em()
+        _ETF_NAME_MAP = dict(zip(df["代码"].astype(str), df["名称"]))
+    except Exception:
+        _ETF_NAME_MAP = {}
+    return _ETF_NAME_MAP
 
 
 def _resolve_name(asset_type: str, market: str, code: str, refresh: bool) -> Optional[str]:
@@ -139,20 +146,12 @@ def _resolve_name(asset_type: str, market: str, code: str, refresh: bool) -> Opt
         if not refresh and cache_key in cache and cache[cache_key]:
             return cache[cache_key]
         if market == "cn":
-            # Try hardcoded mapping first (avoids AKShare rate limit)
-            if symbol in ETF_NAMES:
-                return ETF_NAMES[symbol]
-            try:
-                import akshare as ak
-                info = ak.fund_etf_fund_info_em(fund=symbol)
-                if info is not None and not info.empty:
-                    name = str(info.iloc[0].get("基金简称", ""))
-                    if name:
-                        cache[cache_key] = name
-                        _save_name_cache(cache)
-                        return name
-            except Exception:
-                pass
+            names = _load_etf_name_map()
+            name = names.get(symbol)
+            if name:
+                cache[cache_key] = name
+                _save_name_cache(cache)
+                return name
         else:
             try:
                 import yfinance as yf
