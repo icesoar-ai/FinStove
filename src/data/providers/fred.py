@@ -41,6 +41,23 @@ FRED_SERIES = {
     "PMI_SERVICES": "NAPMSMI",  # ISM 非制造业 PMI (月)
     # 领先指标
     "LEI": "USLEI",  # 领先经济指数 (月)
+    # 大宗商品 (日)
+    "WTI_CRUDE": "DCOILWTICO",       # WTI 原油
+    "BRENT_CRUDE": "DCOILBRENTEU",   # 布伦特原油
+    "NATURAL_GAS": "DHHNGSP",        # 天然气 (Henry Hub)
+    "COPPER": "PCOPPUSDM",           # 铜 (月)
+    "CORN": "PMAIZMTUSDM",           # 玉米 (月)
+    "SOYBEAN": "PSOYBUSDQ",          # 大豆 (季)
+}
+
+# 商品 symbol → FRED series ID 映射
+COMMODITY_FRED_MAP = {
+    "CL": "DCOILWTICO",
+    "BZ": "DCOILBRENTEU",
+    "NG": "DHHNGSP",
+    "HG": "PCOPPUSDM",
+    "ZC": "PMAIZMTUSDM",
+    "ZS": "PSOYBUSDQ",
 }
 
 
@@ -238,6 +255,38 @@ class FREDProvider:
             "consumer_sentiment": self.get_consumer_sentiment(),
         }
         return result
+
+    def get_commodity_daily(self, symbol: str, start: str = "2010-01-01",
+                            end: Optional[str] = None) -> pd.DataFrame:
+        """Get commodity daily data from FRED as fallback.
+
+        Returns OHLCV-like DataFrame with date and close columns.
+        open/high/low filled from close since FRED only provides daily price.
+        """
+        series_id = COMMODITY_FRED_MAP.get(symbol.upper())
+        if series_id is None:
+            return pd.DataFrame()
+
+        df = self.get_series(series_id)
+        if df.empty:
+            return pd.DataFrame()
+
+        df["date"] = pd.to_datetime(df["date"]).dt.date
+        df = df.rename(columns={"value": "close"})
+        if start:
+            df = df[df["date"] >= pd.to_datetime(start).date()]
+        if end:
+            df = df[df["date"] <= pd.to_datetime(end).date()]
+        df = df.sort_values("date").reset_index(drop=True)
+
+        # 生成 OHLCV 字段（FRED 只有收盘价，其余用 close 填充）
+        df["open"] = df["close"]
+        df["high"] = df["close"]
+        df["low"] = df["close"]
+        df["volume"] = 0
+        df = df[["date", "open", "high", "low", "close", "volume"]]
+
+        return df
 
     def get_yield_curve_history(self) -> pd.DataFrame:
         """Get historical yield curve data for analysis."""

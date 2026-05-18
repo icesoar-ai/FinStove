@@ -829,9 +829,11 @@ class DataGateway:
 
     def get_commodity_daily(self, symbol: str, start: str = "2010-01-01",
                             end: Optional[str] = None, force: bool = False) -> pd.DataFrame:
-        """商品日线 OHLCV."""
+        """商品日线 OHLCV. YFinance 主 → FRED 降级."""
         end = end or date.today().strftime("%Y-%m-%d")
         sym = symbol.upper()
+
+        df = None
         if force:
             df = self._fetch_and_save("commodity", "global", sym, "daily", "yfinance",
                                    self._yf.get_commodity_daily, symbol, start, end)
@@ -840,6 +842,17 @@ class DataGateway:
                 "commodity", "global", sym, "daily",
                 "yfinance", self._yf.get_commodity_daily, symbol, start, end,
             )
+
+        if df is not None and not df.empty:
+            return df
+
+        # 降级: FRED
+        fred_df = self._try("_fred", self._fred.get_commodity_daily, symbol, start, end)
+        if fred_df is not None and not fred_df.empty:
+            logger.info("commodity %s 降级至 FRED, %d rows", sym, len(fred_df))
+            self._storage.merge_and_save(fred_df, "commodity", "global", sym, "daily")
+            return fred_df
+
         return df if df is not None else pd.DataFrame()
 
     def get_hk_stock_spot(self) -> pd.DataFrame:
