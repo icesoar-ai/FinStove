@@ -119,6 +119,7 @@ Gateway `_try()` 封装此模式，ETF/股票/期货调用统一经过。Provide
 | policy | 央行方向/财政/监管/地缘(基于关键词规则) | 新闻 + FRED |
 | correlation | 商品-货币/债券-股票/避险流/risk-on-off | yfinance + FRED |
 | report_text | 年报文本分析 (审计意见/指标提取/风险/展望) | CNINFO + SEC EDGAR |
+| dividend_yield | TTM 股息率时间序列 (qfq 反推不复权价格 + 送转归一化) | daily + dividends Parquet |
 
 ### Fundamental Analysis 子模块 (`src/analysis/fundamental/`)
 

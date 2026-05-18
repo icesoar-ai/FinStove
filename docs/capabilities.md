@@ -30,6 +30,7 @@
 |-------|------|------|
 | `/analyze-stock <TICKER>` | 技术面 | 趋势/动量/成交量/支撑阻力/形态识别 |
 | `/valuation <TICKER>` | 基本面 | 10 种估值方法综合 |
+| `/dividend-yield <TICKER>` | 股息率 | TTM 股息率时间序列、统计摘要与图表 |
 | `/macro-check` | 宏观 | CN 15+指标 + US via FRED + DXY + VIX |
 | `/sentiment <TICKER>` | 情绪 | jieba 分词 + 金融情感词典 |
 | `/report-analyze <TICKER>` | 年报文本 | 审计意见/指标提取/风险因素/管理层展望 |
@@ -106,6 +107,7 @@
 ./bin/fstove scenario <TICKER>           # 情景分析
 ./bin/fstove review <TICKER>             # 回顾历史判断
 ./bin/fstove market-scan                 # 多市场扫描
+./bin/fstove dividend-yield <TICKER>     # 股息率曲线分析
 ./bin/fstove summary                     # 每日数据汇总
 ```
 
