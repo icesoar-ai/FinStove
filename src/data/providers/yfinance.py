@@ -1,20 +1,10 @@
 from datetime import date
-import random
 from typing import Optional
 
 import pandas as pd
-import requests
 
 from ..cache import DataCache
 from ..normalizer import standardize
-
-_USER_AGENTS = [
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
-]
 
 SUFFIX_MAP = {
     "cn": {"stock": ".SS", "index": ".SS"},
@@ -136,14 +126,13 @@ class YFinanceProvider:
         import yfinance as yf
         self._yf = yf
 
-    @staticmethod
-    def _fresh_session() -> requests.Session:
-        s = requests.Session()
-        s.headers["User-Agent"] = random.choice(_USER_AGENTS)
-        return s
-
     def _get_with_fallback(self, ticker: str, start: str, end: str) -> pd.DataFrame:
-        """Get OHLCV with one internal retry using a fresh session on failure."""
+        """Get OHLCV with one internal retry on transient failure.
+
+        Does NOT inject a custom session — yfinance v0.6+ requires curl_cffi
+        for TLS fingerprinting and rejects plain requests.Session.
+        """
+        import time
         try:
             tk = self._yf.Ticker(ticker)
             df = tk.history(start=start, end=end)
@@ -152,8 +141,8 @@ class YFinanceProvider:
         except Exception:
             pass
 
-        # Fallback: fresh session + rotated UA
-        tk = self._yf.Ticker(ticker, session=self._fresh_session())
+        time.sleep(5)
+        tk = self._yf.Ticker(ticker)
         df = tk.history(start=start, end=end)
         return self._normalize_df(df)
 
