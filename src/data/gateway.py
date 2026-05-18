@@ -58,10 +58,14 @@ class DataGateway:
         "_etf": "akshare", "_news": "news_cn",
     }
 
+    _shared_limiter: Optional[RateLimiter] = None
+
     def __init__(self, cache: Optional[DataCache] = None, storage: Optional[ParquetStorage] = None):
         self._cache = cache or DataCache()
         self._storage = storage or ParquetStorage()
-        self._rate_limiter = RateLimiter.from_yaml("config/providers.yaml")
+        if DataGateway._shared_limiter is None:
+            DataGateway._shared_limiter = RateLimiter.from_yaml("config/providers.yaml")
+        self._rate_limiter = DataGateway._shared_limiter
         self._ak = AKShareProvider(cache=self._cache)
         self._yf = YFinanceProvider(cache=self._cache)
         self._bs = BaostockProvider(cache=self._cache)
