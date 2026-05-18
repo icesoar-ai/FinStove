@@ -58,9 +58,12 @@ def validate_ohlcv(df: pd.DataFrame, asset_path: str) -> list[ValidationIssue]:
     issues = []
     required = {"high", "low", "close", "volume"}
     if not required.issubset(df.columns):
-        return issues  # Column check handles this
+        return issues
 
-    bad_rows_hl = (df["high"] < df["low"]).sum()
+    # 绝对容差 0.01，消除 float 精度误差 (~1e-15)、负价格下的相对比较失真
+    TOL = 0.01
+
+    bad_rows_hl = ((df["low"] - df["high"]) > TOL).sum()
     if bad_rows_hl > 0:
         issues.append(ValidationIssue(
             severity=Severity.ERROR,
@@ -78,8 +81,8 @@ def validate_ohlcv(df: pd.DataFrame, asset_path: str) -> list[ValidationIssue]:
             asset_path=asset_path,
         ))
 
-    above_high = (df["close"] > df["high"] * 1.005).sum()
-    below_low = (df["close"] < df["low"] * 0.995).sum()
+    above_high = ((df["close"] - df["high"]) > TOL).sum()
+    below_low = ((df["low"] - df["close"]) > TOL).sum()
     if above_high > 0:
         issues.append(ValidationIssue(
             severity=Severity.WARNING,
