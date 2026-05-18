@@ -72,7 +72,7 @@ docs/               # 文档
 
 ### Data Layer (`src/data/`)
 
-DataGateway (`gateway.py`) 为 CLI 唯一入口，持有 8 个 Provider，内置 A股三级降级链 (AKShare → yfinance → Baostock)，统一 Parquet/SQLite 读写路径、名称查询、聚合宏观数据。
+DataGateway (`gateway.py`) 为 CLI 唯一入口，持有 8 个 Provider，内置 A股三级降级链 (AKShare → yfinance → Baostock)、**商品二级降级** (yfinance → FRED，能源/基础金属)、统一 Parquet/SQLite 读写路径、名称查询、聚合宏观数据。
 
 存储方案：Parquet（原始数据）+ SQLite（API 请求缓存）两层架构。Parquet 是真正的数据源，SQLite 只是 API 去重缓存。
 
@@ -201,7 +201,7 @@ diskcache (SQLite缓存)
 | 数据源 | 限制 |
 |--------|------|
 | AKShare | 东方财富频繁限流；接口偶尔变更；无港股/美股财报、ETF、可转债 |
-| YFinance | 批量请求极快触发 Rate Limit；默认复权偶尔出错；部分品种历史短 (CNY外汇对)；A股/港股延迟 15 分钟 |
+| YFinance | 批量请求极快触发 Rate Limit；商品 ticker 偶被下架 (BZ=F, PL=F 已失效)；默认复权偶尔出错；部分品种历史短 (CNY外汇对)；A股/港股延迟 15 分钟 |
 | FRED | 需 `FRED_API_KEY` 环境变量（`.env` 自动加载）；仅美国，无中国/欧洲宏观 |
 | CoinGecko | 免费版速率限制严格 (~10-30次/分钟)；历史数据精度不如交易所 API |
 | Baostock | 仅 A 股日线，无财务/指数/汇率数据，精度和时效性略低 |

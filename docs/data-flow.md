@@ -143,6 +143,20 @@ gw.get_daily("603650", Market.CN)
                                → Gateway.merge_and_save(→ .../603650_彤程新材/daily.parquet)
 ```
 
+## 降级路径 (商品 — yfinance → FRED)
+
+```
+gw.get_commodity_daily("BZ")
+  → YFinanceProvider.get_commodity_daily("BZ")
+       ├─ 成功 → merge_and_save → 返回
+       └─ 异常/限流/空
+            → FREDProvider.get_commodity_daily("BZ")
+                 ├─ 成功 → merge_and_save → 返回 (OHLC filled from close)
+                 └─ 空 → FRED 不覆盖该品种 (贵金属)
+```
+
+覆盖：能源 (CL/BZ/NG) 及基础金属 (HG/ZC/ZS)。FRED 仅提供日收盘价，其余 OHLC 用 close 填充。贵金属 (GC/SI/PL/PA) 无 FRED 覆盖。
+
 ## 数据生命周期
 
 ```
@@ -162,7 +176,7 @@ Provider API 请求
 |----------|--------|---------|--------|
 | AKShare | 东方财富/同花顺/巨潮 | A股日线/三张表/15+宏观指标/资金流向/新闻/实时行情 | 536 行 |
 | YFinance | Yahoo Finance | 全球股票/商品/外汇/指数/加密货币/分红/盘中K线 | 467 行 |
-| FRED | 美联储经济数据库 | 利率/CPI/GDP/PMI/失业率/收益率曲线/消费者信心 | 319 行 |
+| FRED | 美联储经济数据库 | 利率/CPI/GDP/PMI/失业率/收益率曲线/消费者信心 + **商品降级** (能源/基础金属日线) | 362 行 |
 | CoinGecko | CoinGecko | 加密货币价格/历史/市值 | 284 行 |
 | CNINFO | 巨潮资讯网 | A股年报 PDF + MD | 193 行 |
 | SEC EDGAR | SEC | 美股 10-K 年报 | 84 行 |
