@@ -267,10 +267,7 @@ class YFinanceProvider:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
         ticker = COMMODITY_TICKERS.get(symbol.upper(), f"{symbol.upper()}=F")
-        try:
-            df = self.get_generic(ticker, start, end)
-        except Exception:
-            df = pd.DataFrame()
+        df = self.get_generic(ticker, start, end)
         return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Forex Daily (with Parquet incremental) ----
@@ -280,10 +277,7 @@ class YFinanceProvider:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
         ticker = FOREX_PAIRS.get(pair.upper(), f"{pair.upper()}=X")
-        try:
-            df = self.get_generic(ticker, start, end)
-        except Exception:
-            df = pd.DataFrame()
+        df = self.get_generic(ticker, start, end)
         return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Crypto Daily (with Parquet incremental) ----
@@ -293,10 +287,7 @@ class YFinanceProvider:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
         ticker = CRYPTO_TICKERS.get(symbol.upper(), f"{symbol.upper()}-USD")
-        try:
-            df = self.get_generic(ticker, start, end)
-        except Exception:
-            df = pd.DataFrame()
+        df = self.get_generic(ticker, start, end)
         return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Intraday (minute bars) ----
