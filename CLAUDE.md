@@ -39,6 +39,7 @@ src/track/          # 判断跟踪 (record → review → stats)
 src/cli/            # CLI 入口 (Click)
 config/             # 配置文件 (主观策略层)
 data/               # 原始数据 (Parquet, PDF, MD) — gitignored
+tests/              # 单测 — 分析/工具/数据/CLI
 .claude/skills/     # Claude Code Skills
 docs/               # 详见文档索引
 ```

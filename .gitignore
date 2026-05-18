@@ -34,3 +34,6 @@ venv/
 .claude/commands/opsx/
 .claude/skills/openspec-*/
 openspec/
+.coverage
+.pytest_cache/
+htmlcov/
