@@ -80,13 +80,18 @@ class DataGateway:
         provider_attr: 实例属性名 (如 "_ak", "_yf")，用于查限速配置。
         """
         rkey = self._RATE_KEY.get(provider_attr, provider_attr)
+        last_err = None
         for attempt in self._rate_limiter.attempts(rkey):
             try:
                 result = fn(*args, **kwargs)
                 attempt.success()
                 return result
-            except Exception:
+            except Exception as e:
+                last_err = e
                 attempt.failure()
+        if last_err is not None:
+            logger.warning("%s 全部重试失败 (%d 次): %s", rkey,
+                          self._rate_limiter.max_retries(rkey), last_err)
         return None
 
     def read(self, asset: str, mkt: str, sym: str, dtype: str) -> pd.DataFrame:

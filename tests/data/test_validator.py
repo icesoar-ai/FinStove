@@ -79,14 +79,14 @@ class TestValidateOHLCV:
         assert "Close < Low" in issues[0].message
 
     def test_close_tolerance_boundary(self):
-        # Close at exactly high * 1.005 should NOT trigger (tolerance)
+        # Close 0.005 above high: diff < 0.01 tolerance → NOT trigger
         h = 100.0
-        df = _make_df(high=[h], low=[h - 1], close=[h * 1.005], volume=[1],
+        df = _make_df(high=[h], low=[h - 1], close=[h + 0.005], volume=[1],
                       open=[h], date=[date.today() - timedelta(days=1)])
         assert validate_ohlcv(df, "test") == []
 
-        # Close just above high * 1.005 SHOULD trigger
-        df2 = _make_df(high=[h], low=[h - 1], close=[h * 1.005 + 0.01], volume=[1],
+        # Close 0.02 above high: diff > 0.01 tolerance → SHOULD trigger
+        df2 = _make_df(high=[h], low=[h - 1], close=[h + 0.02], volume=[1],
                        open=[h], date=[date.today() - timedelta(days=1)])
         issues = validate_ohlcv(df2, "test")
         assert any("Close > High" in i.message for i in issues)

@@ -49,7 +49,7 @@ def commodity_data(symbol: str, start: str, end: str, spot: bool):
             df = gw.get_commodity_daily(sym, start=start, end=end, force=True)
 
             if df is None or df.empty:
-                console.print(f"[yellow]  No data for {sym}[/yellow]")
+                console.print(f"[yellow]  No data for {sym} (API may be rate-limited)[/yellow]")
                 continue
 
             console.print(f"[green]  {len(df)} rows[/green]")
