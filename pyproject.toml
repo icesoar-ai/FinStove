@@ -31,6 +31,17 @@ nlp = ["jieba>=0.42.1", "nltk>=3.8.0", "feedparser>=6.0.0"]
 web = ["streamlit>=1.32.0", "plotly>=5.19.0"]
 dev = ["pytest>=8.0", "pytest-cov", "ruff>=0.3.0", "mypy>=1.9.0"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "src/data/providers/*",
+    "src/data/gateway.py",
+]
+
 [build-system]
 requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
