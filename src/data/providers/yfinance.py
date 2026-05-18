@@ -1,10 +1,20 @@
 from datetime import date
+import random
 from typing import Optional
 
 import pandas as pd
+import requests
 
 from ..cache import DataCache
 from ..normalizer import standardize
+
+_USER_AGENTS = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
+]
 
 SUFFIX_MAP = {
     "cn": {"stock": ".SS", "index": ".SS"},
@@ -125,6 +135,27 @@ class YFinanceProvider:
         self._cache = cache
         import yfinance as yf
         self._yf = yf
+
+    @staticmethod
+    def _fresh_session() -> requests.Session:
+        s = requests.Session()
+        s.headers["User-Agent"] = random.choice(_USER_AGENTS)
+        return s
+
+    def _get_with_fallback(self, ticker: str, start: str, end: str) -> pd.DataFrame:
+        """Get OHLCV with one internal retry using a fresh session on failure."""
+        try:
+            tk = self._yf.Ticker(ticker)
+            df = tk.history(start=start, end=end)
+            if df is not None and not df.empty:
+                return self._normalize_df(df)
+        except Exception:
+            pass
+
+        # Fallback: fresh session + rotated UA
+        tk = self._yf.Ticker(ticker, session=self._fresh_session())
+        df = tk.history(start=start, end=end)
+        return self._normalize_df(df)
 
     def _cached(self, method: str, ttl: int, fn, *args, **kwargs) -> pd.DataFrame:
         if self._cache:
@@ -267,7 +298,7 @@ class YFinanceProvider:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
         ticker = COMMODITY_TICKERS.get(symbol.upper(), f"{symbol.upper()}=F")
-        df = self.get_generic(ticker, start, end)
+        df = self._get_with_fallback(ticker, start, end)
         return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Forex Daily (with Parquet incremental) ----
@@ -277,7 +308,7 @@ class YFinanceProvider:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
         ticker = FOREX_PAIRS.get(pair.upper(), f"{pair.upper()}=X")
-        df = self.get_generic(ticker, start, end)
+        df = self._get_with_fallback(ticker, start, end)
         return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Crypto Daily (with Parquet incremental) ----
@@ -287,7 +318,7 @@ class YFinanceProvider:
         if end is None:
             end = date.today().strftime("%Y-%m-%d")
         ticker = CRYPTO_TICKERS.get(symbol.upper(), f"{symbol.upper()}-USD")
-        df = self.get_generic(ticker, start, end)
+        df = self._get_with_fallback(ticker, start, end)
         return df if df is not None and not df.empty else pd.DataFrame()
 
     # ---- Intraday (minute bars) ----
